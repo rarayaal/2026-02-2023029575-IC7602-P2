@@ -30,4 +30,9 @@ ssize_t dns_forward_query(const char *upstream_ip, int upstream_port,
                           const uint8_t *query_buf, size_t query_len,
                           uint8_t *response_buf, size_t response_max_len);
 
+/* Construye la respuesta DNS binaria con un registro A hacia la caché zonal */
+ssize_t dns_build_response(const uint8_t *query_buf, size_t query_len,
+                           const char *ip_str, uint32_t ttl, uint8_t *resp_buf,
+                           size_t resp_max_len);
+
 #endif /* DNS_H */

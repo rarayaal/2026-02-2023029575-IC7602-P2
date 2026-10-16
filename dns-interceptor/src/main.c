@@ -1,4 +1,5 @@
 #include "dns.h"
+#include "domains.h"
 
 #include <arpa/inet.h>
 #include <signal.h>
@@ -33,6 +34,16 @@ int main(void) {
 
   const char *upstream_port_env = getenv("UPSTREAM_DNS_PORT");
   int upstream_port = upstream_port_env ? atoi(upstream_port_env) : 53;
+
+  /* Registra dominios administrados y sus cachés zonales */
+  domains_init();
+  domains_add("app.local", 300);
+  domains_add_zonal_cache("app.local", "CR", "192.168.1.100");
+  domains_add_zonal_cache("app.local", "DEFAULT", "192.168.0.100");
+
+  domains_add("api.redes.tec", 60);
+  domains_add_zonal_cache("api.redes.tec", "CR", "10.0.1.50");
+  domains_add_zonal_cache("api.redes.tec", "DEFAULT", "10.0.0.50");
 
   int server_sock = socket(AF_INET, SOCK_DGRAM, 0);
   if (server_sock < 0) {
@@ -97,17 +108,34 @@ int main(void) {
       continue;
     }
 
-    /* Reenvía la consulta al servidor upstream recursivo */
-    printf("[DNS Interceptor] [FORWARDING] Consulta para '%s' desde %s -> "
-           "Reenviando a %s:%d\n",
-           domain, client_ip, upstream_ip, upstream_port);
+    registered_domain_t dom_info;
+    if (domains_is_registered(domain, &dom_info)) {
+      /* Resuelve la consulta apuntando a la caché zonal del dominio */
+      const char *cache_ip = domains_get_cache_ip_for_country(&dom_info, "CR");
+      printf("[DNS Interceptor] [INTERCEPTADO] Dominio '%s' -> Respondiendo "
+             "Caché Zonal IP %s\n",
+             domain, cache_ip);
 
-    ssize_t fwd_len =
-        dns_forward_query(upstream_ip, upstream_port, buffer,
-                          (size_t)bytes_recv, resp_buf, sizeof(resp_buf));
-    if (fwd_len > 0) {
-      sendto(server_sock, resp_buf, (size_t)fwd_len, 0,
-             (struct sockaddr *)&client_addr, client_len);
+      ssize_t resp_len =
+          dns_build_response(buffer, (size_t)bytes_recv, cache_ip, dom_info.ttl,
+                             resp_buf, sizeof(resp_buf));
+      if (resp_len > 0) {
+        sendto(server_sock, resp_buf, (size_t)resp_len, 0,
+               (struct sockaddr *)&client_addr, client_len);
+      }
+    } else {
+      /* Reenvía la consulta al servidor upstream recursivo */
+      printf("[DNS Interceptor] [FORWARDING] Consulta para '%s' desde %s -> "
+             "Reenviando a %s:%d\n",
+             domain, client_ip, upstream_ip, upstream_port);
+
+      ssize_t fwd_len =
+          dns_forward_query(upstream_ip, upstream_port, buffer,
+                            (size_t)bytes_recv, resp_buf, sizeof(resp_buf));
+      if (fwd_len > 0) {
+        sendto(server_sock, resp_buf, (size_t)fwd_len, 0,
+               (struct sockaddr *)&client_addr, client_len);
+      }
     }
   }
 
