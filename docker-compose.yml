@@ -1,0 +1,16 @@
+services:
+  ui:
+    container_name: zonal-cache-ui
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
+        VITE_APP_TITLE: ${VITE_APP_TITLE:-}
+        VITE_APP_ENV: ${VITE_APP_ENV:-}
+        UI_PORT: ${UI_PORT:-5173}
+    ports:
+      - "${UI_PORT:-5173}:80"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
