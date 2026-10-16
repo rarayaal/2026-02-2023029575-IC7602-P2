@@ -1,7 +1,0 @@
-{
-    "files.eol": "\n",
-    "files.encoding": "utf8",
-    "git.autofetch": true,
-    "git.enableSmartCommit": true,
-    "terminal.integrated.defaultProfile.windows": "PowerShell"
-}
