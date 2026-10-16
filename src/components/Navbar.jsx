@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Server, Home, AlertCircle, Menu, X, Layers } from 'lucide-react';
+import { Server, Home, AlertCircle, Menu, X } from 'lucide-react';
 import { config } from '../utils/config';
 import StatusBadge from './StatusBadge';
 

@@ -8,9 +8,7 @@ import {
   Server, 
   ArrowRight, 
   AlertCircle,
-  ExternalLink,
-  Code2,
-  Cpu
+  Code2
 } from 'lucide-react';
 import { config } from '../utils/config';
 import { PROJECT_METADATA } from '../utils/constants';
@@ -25,10 +23,21 @@ export default function HomePage() {
     setTestingClient(true);
     setTestResult(null);
 
-    // Prueba genérica del cliente HTTP centralizado (sin endpoints de negocio quemados)
-    const res = await apiClient.get('/health');
-    setTestingClient(false);
-    setTestResult(res);
+    try {
+      // Prueba genérica del cliente HTTP centralizado (sin endpoints de negocio quemados)
+      const res = await apiClient.get('/health');
+      setTestResult(res);
+    } catch (err) {
+      setTestResult({
+        ok: false,
+        status: 0,
+        data: null,
+        error: err.message,
+        isConfigError: true,
+      });
+    } finally {
+      setTestingClient(false);
+    }
   };
 
   return (
@@ -92,6 +101,8 @@ export default function HomePage() {
           <p className="text-slate-300">
             {testResult.ok
               ? 'Petición exitosa al backend.'
+              : testResult.isConfigError
+              ? 'Error controlado: No se pudo realizar la petición porque la variable VITE_API_BASE_URL no está configurada.'
               : `Petición dirigida a "${config.apiBaseUrl}/health". Estado de conexión capturado correctamente sin endpoints quemados:`}
           </p>
           <pre className="mt-2 p-2.5 rounded-lg bg-black/50 font-mono text-slate-300 overflow-x-auto text-[11px]">
@@ -191,7 +202,11 @@ export default function HomePage() {
 
           <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
             <span className="text-slate-400 block font-sans font-semibold">VITE_API_BASE_URL:</span>
-            <span className="text-sky-300 font-bold break-all">{config.apiBaseUrl}</span>
+            {config.isApiConfigured ? (
+              <span className="text-sky-300 font-bold break-all">{config.apiBaseUrl}</span>
+            ) : (
+              <span className="text-amber-400 font-bold italic">⚠️ No configurada (sin URL base)</span>
+            )}
           </div>
 
           <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">

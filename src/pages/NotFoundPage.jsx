@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { AlertTriangle, Home, ArrowLeft, Compass } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Compass } from 'lucide-react';
 
 export default function NotFoundPage() {
   const location = useLocation();
