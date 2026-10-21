@@ -2,6 +2,7 @@
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static cache_entry_data_t sample_entry(void) {
@@ -49,6 +50,29 @@ int main(void) {
     assert(cache_index_remove(index, "example.com", "/index.html") == CACHE_OK);
     assert(cache_index_remove(index, "example.com", "/index.html") == CACHE_NOT_FOUND);
     assert(cache_index_size(index) == 0);
+    cache_index_destroy(index);
+
+    index = cache_index_create(2);
+    cache_storage_t *storage = cache_storage_create("build/cache-test");
+    const char content[] = "contenido de prueba\n";
+    void *loaded = NULL;
+    size_t loaded_size = 0;
+
+    assert(index != NULL);
+    assert(storage != NULL);
+    entry = sample_entry();
+    assert(cache_store_put(index, storage, &entry, content,
+                           sizeof(content) - 1) == CACHE_OK);
+    assert(cache_store_get(index, storage, entry.domain, entry.url, &result,
+                           &loaded, &loaded_size) == CACHE_OK);
+    assert(loaded_size == sizeof(content) - 1);
+    assert(memcmp(loaded, content, loaded_size) == 0);
+    assert(strstr(result.file_path, "build/cache-test/example.com/") != NULL);
+    free(loaded);
+    assert(cache_store_remove(index, storage, entry.domain, entry.url) == CACHE_OK);
+    assert(cache_store_get(index, storage, entry.domain, entry.url, &result,
+                           &loaded, &loaded_size) == CACHE_NOT_FOUND);
+    cache_storage_destroy(storage);
     cache_index_destroy(index);
     puts("Todas las pruebas del indice pasaron.");
     return 0;
