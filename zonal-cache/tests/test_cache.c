@@ -22,6 +22,25 @@ static cache_entry_data_t sample_entry(void) {
 }
 
 int main(void) {
+    cache_ttl_rule_t ttl_rules[] = {
+        {.file_type = "html", .ttl_seconds = 60},
+        {.file_type = "png", .ttl_seconds = 3600}
+    };
+    cache_ttl_config_t ttl_config = {
+        .rules = ttl_rules,
+        .rule_count = 2,
+        .default_ttl_seconds = 30
+    };
+    cache_entry_data_t ttl_entry = sample_entry();
+    size_t removed_count = 0;
+
+    assert(cache_ttl_expiration(&ttl_config, "html", 100) == 160);
+    assert(cache_ttl_expiration(&ttl_config, "css", 100) == 130);
+    assert(cache_entry_is_expired(&ttl_entry, 199) == 0);
+    assert(cache_entry_is_expired(&ttl_entry, 200) == 1);
+    ttl_entry.expires_at = 0;
+    assert(cache_entry_is_expired(&ttl_entry, 100000) == 0);
+
     cache_index_t *index = cache_index_create(2);
     cache_entry_data_t entry = sample_entry();
     cache_entry_data_t result;
@@ -61,6 +80,7 @@ int main(void) {
     assert(index != NULL);
     assert(storage != NULL);
     entry = sample_entry();
+    entry.expires_at = 0;
     assert(cache_store_put(index, storage, &entry, content,
                            sizeof(content) - 1) == CACHE_OK);
     assert(cache_store_get(index, storage, entry.domain, entry.url, &result,
@@ -72,6 +92,22 @@ int main(void) {
     assert(cache_store_remove(index, storage, entry.domain, entry.url) == CACHE_OK);
     assert(cache_store_get(index, storage, entry.domain, entry.url, &result,
                            &loaded, &loaded_size) == CACHE_NOT_FOUND);
+
+    ttl_entry = sample_entry();
+    ttl_entry.expires_at = 100;
+    ttl_entry.url = "/expired.html";
+    assert(cache_store_put(index, storage, &ttl_entry, content,
+                           sizeof(content) - 1) == CACHE_OK);
+    assert(cache_store_get(index, storage, ttl_entry.domain, ttl_entry.url,
+                           &result, &loaded, &loaded_size) == CACHE_EXPIRED);
+    assert(cache_index_size(index) == 0);
+
+    ttl_entry.url = "/expired-again.html";
+    assert(cache_store_put(index, storage, &ttl_entry, content,
+                           sizeof(content) - 1) == CACHE_OK);
+    assert(cache_store_purge_expired(index, storage, 100, &removed_count) == CACHE_OK);
+    assert(removed_count == 1);
+    assert(cache_index_size(index) == 0);
     cache_storage_destroy(storage);
     cache_index_destroy(index);
     puts("Todas las pruebas del indice pasaron.");

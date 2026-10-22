@@ -264,6 +264,75 @@ size_t cache_index_size(const cache_index_t *index) {
     return index == NULL ? 0 : index->entry_count;
 }
 
+time_t cache_ttl_expiration(const cache_ttl_config_t *config,
+                            const char *file_type,
+                            time_t created_at) {
+    size_t rule_index;
+    time_t ttl_seconds;
+
+    if (config == NULL || created_at < 0) {
+        return 0;
+    }
+    ttl_seconds = config->default_ttl_seconds;
+    for (rule_index = 0; rule_index < config->rule_count; rule_index++) {
+        const cache_ttl_rule_t *rule = &config->rules[rule_index];
+        if (rule->file_type != NULL && file_type != NULL &&
+            strcmp(rule->file_type, file_type) == 0) {
+            ttl_seconds = rule->ttl_seconds;
+            break;
+        }
+    }
+    if (ttl_seconds <= 0) {
+        return 0;
+    }
+    return created_at > (time_t)(~(time_t)0) - ttl_seconds
+               ? (time_t)(~(time_t)0)
+               : created_at + ttl_seconds;
+}
+
+int cache_entry_is_expired(const cache_entry_data_t *entry, time_t now) {
+    if (entry == NULL || now < 0 || entry->expires_at == 0) {
+        return 0;
+    }
+    return now >= entry->expires_at;
+}
+
+cache_result_t cache_index_purge_expired(cache_index_t *index,
+                                         time_t now,
+                                         size_t *removed_count) {
+    size_t bucket;
+    size_t removed = 0;
+
+    if (index == NULL || now < 0) {
+        return CACHE_INVALID_ARGUMENT;
+    }
+    for (bucket = 0; bucket < index->bucket_count; bucket++) {
+        cache_node_t *previous = NULL;
+        cache_node_t *current = index->buckets[bucket];
+        while (current != NULL) {
+            cache_node_t *next = current->next;
+            if (cache_entry_is_expired(&current->entry, now)) {
+                if (previous == NULL) {
+                    index->buckets[bucket] = next;
+                } else {
+                    previous->next = next;
+                }
+                free_entry(&current->entry);
+                free(current);
+                index->entry_count--;
+                removed++;
+            } else {
+                previous = current;
+            }
+            current = next;
+        }
+    }
+    if (removed_count != NULL) {
+        *removed_count = removed;
+    }
+    return CACHE_OK;
+}
+
 static unsigned long hash_url(const char *url) {
     unsigned long hash = 2166136261u;
     const unsigned char *part = (const unsigned char *)url;
@@ -500,7 +569,7 @@ cache_result_t cache_store_put(cache_index_t *index,
     return result;
 }
 
-cache_result_t cache_store_get(const cache_index_t *index,
+cache_result_t cache_store_get(cache_index_t *index,
                                const cache_storage_t *storage,
                                const char *domain,
                                const char *url,
@@ -516,7 +585,60 @@ cache_result_t cache_store_get(const cache_index_t *index,
     if (result != CACHE_OK) {
         return result;
     }
+    /* Una entrada vencida nunca debe servirse aunque su archivo siga presente. */
+    if (cache_entry_is_expired(entry_out, time(NULL))) {
+        result = cache_storage_remove(storage, domain, url);
+        if (result != CACHE_OK && result != CACHE_NOT_FOUND) {
+            return result;
+        }
+        cache_index_remove(index, domain, url);
+        return CACHE_EXPIRED;
+    }
     return cache_storage_read(storage, domain, url, data_out, data_size_out);
+}
+
+cache_result_t cache_store_purge_expired(cache_index_t *index,
+                                         const cache_storage_t *storage,
+                                         time_t now,
+                                         size_t *removed_count) {
+    size_t bucket;
+    size_t removed = 0;
+
+    if (index == NULL || storage == NULL || now < 0) {
+        return CACHE_INVALID_ARGUMENT;
+    }
+    for (bucket = 0; bucket < index->bucket_count; bucket++) {
+        cache_node_t *previous = NULL;
+        cache_node_t *current = index->buckets[bucket];
+        while (current != NULL) {
+            cache_node_t *next = current->next;
+            if (cache_entry_is_expired(&current->entry, now)) {
+                cache_result_t result = cache_storage_remove(
+                    storage, current->entry.domain, current->entry.url);
+                if (result != CACHE_OK && result != CACHE_NOT_FOUND) {
+                    previous = current;
+                    current = next;
+                    continue;
+                }
+                if (previous == NULL) {
+                    index->buckets[bucket] = next;
+                } else {
+                    previous->next = next;
+                }
+                free_entry(&current->entry);
+                free(current);
+                index->entry_count--;
+                removed++;
+            } else {
+                previous = current;
+            }
+            current = next;
+        }
+    }
+    if (removed_count != NULL) {
+        *removed_count = removed;
+    }
+    return CACHE_OK;
 }
 
 cache_result_t cache_store_remove(cache_index_t *index,

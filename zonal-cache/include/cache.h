@@ -20,7 +20,8 @@ typedef enum {
     CACHE_INVALID_ARGUMENT,
     CACHE_OUT_OF_MEMORY,
     CACHE_IO_ERROR,
-    CACHE_BUFFER_TOO_SMALL
+    CACHE_BUFFER_TOO_SMALL,
+    CACHE_EXPIRED
 } cache_result_t;
 
 typedef struct {
@@ -35,6 +36,17 @@ typedef struct {
     unsigned long access_count;
     unsigned long insertion_order;
 } cache_entry_data_t;
+
+typedef struct {
+    const char *file_type;
+    time_t ttl_seconds;
+} cache_ttl_rule_t;
+
+typedef struct {
+    const cache_ttl_rule_t *rules;
+    size_t rule_count;
+    time_t default_ttl_seconds;
+} cache_ttl_config_t;
 
 typedef struct cache_index cache_index_t;
 typedef struct cache_storage cache_storage_t;
@@ -72,6 +84,19 @@ cache_result_t cache_index_touch(cache_index_t *index,
 
 /* Cantidad actual de entradas almacenadas. */
 size_t cache_index_size(const cache_index_t *index);
+
+/* Calcula expires_at usando la regla especifica o el TTL por defecto. */
+time_t cache_ttl_expiration(const cache_ttl_config_t *config,
+                            const char *file_type,
+                            time_t created_at);
+
+/* Devuelve 1 si expiro, 0 si sigue vigente o no tiene expiracion. */
+int cache_entry_is_expired(const cache_entry_data_t *entry, time_t now);
+
+/* Elimina del indice todas las entradas vencidas y devuelve cuantas retiro. */
+cache_result_t cache_index_purge_expired(cache_index_t *index,
+                                         time_t now,
+                                         size_t *removed_count);
 
 /* Crea el almacenamiento bajo root_path y sus directorios necesarios. */
 cache_storage_t *cache_storage_create(const char *root_path);
@@ -113,13 +138,19 @@ cache_result_t cache_store_put(cache_index_t *index,
                                size_t data_size);
 
 /* Consulta el indice y luego lee el contenido persistido. */
-cache_result_t cache_store_get(const cache_index_t *index,
+cache_result_t cache_store_get(cache_index_t *index,
                                const cache_storage_t *storage,
                                const char *domain,
                                const char *url,
                                cache_entry_data_t *entry_out,
                                void **data_out,
                                size_t *data_size_out);
+
+            /* Elimina del disco y del indice todas las entradas vencidas. */
+            cache_result_t cache_store_purge_expired(cache_index_t *index,
+                                      const cache_storage_t *storage,
+                                      time_t now,
+                                      size_t *removed_count);
 
 /* Elimina el archivo y su entrada del indice. */
 cache_result_t cache_store_remove(cache_index_t *index,
