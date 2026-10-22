@@ -79,12 +79,13 @@ export default function HomePage() {
             </Link>
 
             <Link
-              to="/dominios/nuevo"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-semibold shadow-lg shadow-emerald-600/25 transition-all cursor-pointer"
+              to="/dominios"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-indigo-300 text-sm font-semibold border border-indigo-500/30 transition-all cursor-pointer"
             >
-              <Globe className="w-4 h-4" />
-              <span>Registrar Dominio (T-34)</span>
+              <Globe className="w-4 h-4 text-emerald-400" />
+              <span>Administrar Dominios (T-35)</span>
             </Link>
+
 
             <button
               onClick={handleTestClient}

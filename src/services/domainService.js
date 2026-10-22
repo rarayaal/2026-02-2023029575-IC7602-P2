@@ -304,6 +304,124 @@ export async function requestDomainTxtVerification(domainName) {
   }
 }
 
+/**
+ * Obtiene la lista de dominios registrados en la plataforma (T-35).
+ * @returns {Promise<{ ok: boolean, status: number, data: any[], error: string|null, code: string|null }>}
+ */
+export async function getDomains() {
+  try {
+    const res = await apiClient.get('/domains');
+
+    if (!res.ok) {
+      const { message, code } = parseDomainApiError(res);
+      return {
+        ok: false,
+        status: res.status,
+        data: [],
+        error: message,
+        code,
+      };
+    }
+
+    const domains = Array.isArray(res.data) ? res.data : (res.data?.domains || []);
+    return {
+      ok: true,
+      status: res.status,
+      data: domains,
+      error: null,
+      code: null,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      data: [],
+      error: err.message || 'Error al obtener la lista de dominios',
+      code: 'CLIENT_EXCEPTION',
+    };
+  }
+}
+
+/**
+ * Obtiene el detalle de un dominio registrado específico (T-35).
+ * @param {string} domainName
+ * @returns {Promise<{ ok: boolean, status: number, data: any, error: string|null, code: string|null }>}
+ */
+export async function getDomain(domainName) {
+  const normalizedName = normalizeDomain(domainName);
+
+  try {
+    const res = await apiClient.get(`/domains/${encodeURIComponent(normalizedName)}`);
+
+    if (!res.ok) {
+      const { message, code } = parseDomainApiError(res);
+      return {
+        ok: false,
+        status: res.status,
+        data: null,
+        error: message,
+        code,
+      };
+    }
+
+    return {
+      ok: true,
+      status: res.status,
+      data: res.data,
+      error: null,
+      code: null,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      data: null,
+      error: err.message || 'Error al obtener la información del dominio',
+      code: 'CLIENT_EXCEPTION',
+    };
+  }
+}
+
+/**
+ * Elimina un dominio registrado del sistema (T-35).
+ * @param {string} domainName
+ * @returns {Promise<{ ok: boolean, status: number, data: any, error: string|null, code: string|null }>}
+ */
+export async function deleteDomain(domainName) {
+  const normalizedName = normalizeDomain(domainName);
+
+  try {
+    const res = await apiClient.delete(`/domains/${encodeURIComponent(normalizedName)}`);
+
+    if (!res.ok) {
+      const { message, code } = parseDomainApiError(res);
+      return {
+        ok: false,
+        status: res.status,
+        data: res.data,
+        error: message,
+        code,
+      };
+    }
+
+    return {
+      ok: true,
+      status: res.status,
+      data: res.data,
+      error: null,
+      code: null,
+    };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      data: null,
+      error: err.message || 'Error al eliminar el dominio',
+      code: 'CLIENT_EXCEPTION',
+    };
+  }
+}
+
 export default {
   normalizeDomain,
   validateDomainSyntax,
@@ -311,4 +429,8 @@ export default {
   getDnsTxtSpec,
   registerDomain,
   requestDomainTxtVerification,
+  getDomains,
+  getDomain,
+  deleteDomain,
 };
+

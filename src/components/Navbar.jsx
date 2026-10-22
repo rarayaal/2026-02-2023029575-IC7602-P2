@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Server, Home, AlertCircle, Menu, X, UserPlus, Globe } from 'lucide-react';
+import { Server, Home, AlertCircle, Menu, X, UserPlus, Globe, Plus } from 'lucide-react';
 import { config } from '../utils/config';
 import StatusBadge from './StatusBadge';
 
@@ -55,9 +55,9 @@ export default function Navbar() {
               <UserPlus className="w-4 h-4 text-indigo-400" />
               <span>Crear Cuenta</span>
             </NavLink>
-            <NavLink to="/dominios/nuevo" className={navLinkClass}>
+            <NavLink to="/dominios" className={navLinkClass}>
               <Globe className="w-4 h-4 text-emerald-400" />
-              <span>Registrar Dominio</span>
+              <span>Dominios</span>
             </NavLink>
             <NavLink to="/ruta-inexistente" className={navLinkClass}>
               <AlertCircle className="w-4 h-4 text-amber-400" />
@@ -112,12 +112,20 @@ export default function Navbar() {
             <span>Crear Cuenta (T-34)</span>
           </NavLink>
           <NavLink
-            to="/dominios/nuevo"
+            to="/dominios"
             onClick={() => setMobileMenuOpen(false)}
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-200 hover:bg-slate-800/60"
           >
             <Globe className="w-4 h-4 text-emerald-400" />
-            <span>Registrar Dominio (T-34)</span>
+            <span>Administración de Dominios (T-35)</span>
+          </NavLink>
+          <NavLink
+            to="/dominios/nuevo"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-200 hover:bg-slate-800/60"
+          >
+            <Plus className="w-4 h-4 text-sky-400" />
+            <span>Nuevo Dominio (T-34)</span>
           </NavLink>
           <NavLink
             to="/ruta-inexistente"
@@ -130,11 +138,12 @@ export default function Navbar() {
 
           <div className="pt-3 mt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
             <span>Entorno: <strong className="text-indigo-300 font-mono">{config.appEnv}</strong></span>
-            <span className="text-slate-500">T33 / T34 UI</span>
+            <span className="text-slate-500">T33 / T34 / T35 / T36</span>
           </div>
         </div>
       )}
     </header>
   );
 }
+
 
