@@ -39,11 +39,15 @@ describe('/api/internal service token', () => {
   });
 
   it('accepts requests with the right token', async () => {
-    const res = await fetch(`${baseUrl}/api/internal/domains`, {
-      headers: { authorization: `Bearer ${SERVICE_TOKEN}` },
+    // Un cuerpo vacío falla la validación antes de llegar a Firestore: el 400 demuestra
+    // que la petición ya pasó la autenticación.
+    const res = await fetch(`${baseUrl}/api/internal/validate/api-key`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${SERVICE_TOKEN}`, 'content-type': 'application/json' },
+      body: '{}',
     });
-    // Aún no implementado, pero ya pasó la autenticación.
-    assert.equal(res.status, 501);
+    assert.equal(res.status, 400);
+    assert.equal((await res.json()).error.code, 'INVALID_BODY');
   });
 });
 
