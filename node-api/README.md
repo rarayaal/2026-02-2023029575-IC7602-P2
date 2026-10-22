@@ -34,6 +34,22 @@ npm test
 
 Usa el runner nativo de Node (`node:test`); no requiere Firebase.
 
+### Datos de prueba en Firestore
+
+```bash
+npm run seed
+```
+
+Crea el dominio verificado `app.local` (configurable con `SEED_DOMAIN`) con tres URLs, una por
+mecanismo de autenticación: `/*` sin autenticación, `/admin/*` con usuario y contraseña, y `/api/*`
+con API key. Los secretos generados (contraseña, API key y token de sesión) quedan en
+`.seed-output.json`, que no se commitea. Con el API corriendo se puede probar así:
+
+```bash
+TOKEN=<valor de INTERNAL_SERVICE_TOKEN>
+curl -H "Authorization: Bearer $TOKEN" http://localhost:3000/api/internal/domains/app.local/config
+```
+
 ## Estructura
 
 ```text
@@ -61,7 +77,7 @@ node-api/
 | Método | Ruta | Autenticación | Estado |
 | --- | --- | --- | --- |
 | GET | `/api/health` | ninguna | listo |
-| GET | `/api/internal/domains` | token de servicio | definido (T-31) |
-| GET | `/api/internal/domains/{domain}/config` | token de servicio | definido (T-31) |
-| POST | `/api/internal/validate/api-key` | token de servicio | definido (T-31) |
-| POST | `/api/internal/validate/session` | token de servicio | definido (T-31) |
+| GET | `/api/internal/domains` | token de servicio | listo (T-31) |
+| GET | `/api/internal/domains/{domain}/config` | token de servicio | listo (T-31) |
+| POST | `/api/internal/validate/api-key` | token de servicio | listo (T-31) |
+| POST | `/api/internal/validate/session` | token de servicio | listo (T-31) |
