@@ -51,6 +51,59 @@ describe('/api/internal service token', () => {
   });
 });
 
+describe('UI routes require a Firebase ID token', () => {
+  for (const [method, path] of [
+    ['GET', '/api/users/me'],
+    ['GET', '/api/domains'],
+    ['POST', '/api/domains/example.com/verify'],
+    ['GET', '/api/domains/example.com/urls'],
+  ]) {
+    it(`${method} ${path}`, async () => {
+      const res = await fetch(`${baseUrl}${path}`, { method });
+      assert.equal(res.status, 401);
+      assert.equal((await res.json()).error.code, 'MISSING_ID_TOKEN');
+    });
+  }
+});
+
+describe('public routes validate before touching Firestore', () => {
+  it('POST /api/users rejects an invalid email', async () => {
+    const res = await fetch(`${baseUrl}/api/users`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ displayName: 'Ana', email: 'nope', password: '123456' }),
+    });
+    assert.equal(res.status, 400);
+    assert.equal((await res.json()).error.code, 'INVALID_EMAIL');
+  });
+
+  it('POST /api/sessions requires all fields', async () => {
+    const res = await fetch(`${baseUrl}/api/sessions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ domain: 'a.com' }),
+    });
+    assert.equal(res.status, 400);
+  });
+});
+
+describe('CORS', () => {
+  it('allows configured origins and answers preflight', async () => {
+    process.env.CORS_ORIGINS = 'http://localhost:5173';
+    const res = await fetch(`${baseUrl}/api/domains`, {
+      method: 'OPTIONS',
+      headers: { origin: 'http://localhost:5173' },
+    });
+    assert.equal(res.status, 204);
+    assert.equal(res.headers.get('access-control-allow-origin'), 'http://localhost:5173');
+  });
+
+  it('does not allow other origins', async () => {
+    const res = await fetch(`${baseUrl}/api/health`, { headers: { origin: 'https://evil.test' } });
+    assert.equal(res.headers.get('access-control-allow-origin'), null);
+  });
+});
+
 describe('unknown routes', () => {
   it('respond 404 with the standard error shape', async () => {
     const res = await fetch(`${baseUrl}/api/nope`);
