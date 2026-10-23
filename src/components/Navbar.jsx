@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Server, Home, AlertCircle, Menu, X } from 'lucide-react';
+import { Server, Home, AlertCircle, Menu, X, UserPlus, Globe, Plus } from 'lucide-react';
 import { config } from '../utils/config';
 import StatusBadge from './StatusBadge';
 
@@ -37,23 +37,31 @@ export default function Navbar() {
                   </span>
                 </div>
                 <div className="text-xs text-slate-400 flex items-center gap-2">
-                  <span>Estructura Base UI</span>
+                  <span>UI & Orquestación</span>
                   <span className="text-slate-600">•</span>
-                  <span className="text-slate-400 font-mono">T33</span>
+                  <span className="text-slate-400 font-mono">T33 / T34</span>
                 </div>
               </div>
             </NavLink>
           </div>
 
           {/* Navegación Desktop */}
-          <nav className="hidden md:flex items-center gap-2">
+          <nav className="hidden md:flex items-center gap-1.5">
             <NavLink to="/" className={navLinkClass}>
               <Home className="w-4 h-4 text-sky-400" />
               <span>Inicio</span>
             </NavLink>
+            <NavLink to="/registro" className={navLinkClass}>
+              <UserPlus className="w-4 h-4 text-indigo-400" />
+              <span>Crear Cuenta</span>
+            </NavLink>
+            <NavLink to="/dominios" className={navLinkClass}>
+              <Globe className="w-4 h-4 text-emerald-400" />
+              <span>Dominios</span>
+            </NavLink>
             <NavLink to="/ruta-inexistente" className={navLinkClass}>
               <AlertCircle className="w-4 h-4 text-amber-400" />
-              <span>Verificar Ruta 404</span>
+              <span>Ruta 404</span>
             </NavLink>
           </nav>
 
@@ -93,7 +101,31 @@ export default function Navbar() {
             className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-200 hover:bg-slate-800/60"
           >
             <Home className="w-4 h-4 text-sky-400" />
-            <span>Inicio (Página Base T33)</span>
+            <span>Inicio</span>
+          </NavLink>
+          <NavLink
+            to="/registro"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-200 hover:bg-slate-800/60"
+          >
+            <UserPlus className="w-4 h-4 text-indigo-400" />
+            <span>Crear Cuenta (T-34)</span>
+          </NavLink>
+          <NavLink
+            to="/dominios"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-200 hover:bg-slate-800/60"
+          >
+            <Globe className="w-4 h-4 text-emerald-400" />
+            <span>Administración de Dominios (T-35)</span>
+          </NavLink>
+          <NavLink
+            to="/dominios/nuevo"
+            onClick={() => setMobileMenuOpen(false)}
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-slate-200 hover:bg-slate-800/60"
+          >
+            <Plus className="w-4 h-4 text-sky-400" />
+            <span>Nuevo Dominio (T-34)</span>
           </NavLink>
           <NavLink
             to="/ruta-inexistente"
@@ -106,10 +138,12 @@ export default function Navbar() {
 
           <div className="pt-3 mt-2 border-t border-slate-800 flex items-center justify-between text-xs text-slate-400">
             <span>Entorno: <strong className="text-indigo-300 font-mono">{config.appEnv}</strong></span>
-            <span className="text-slate-500">T33 UI Base</span>
+            <span className="text-slate-500">T33 / T34 / T35 / T36</span>
           </div>
         </div>
       )}
     </header>
   );
 }
+
+
