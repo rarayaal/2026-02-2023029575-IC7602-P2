@@ -8,7 +8,8 @@ import {
   Server, 
   ArrowRight, 
   AlertCircle,
-  Code2
+  Code2,
+  UserPlus
 } from 'lucide-react';
 import { config } from '../utils/config';
 import { PROJECT_METADATA } from '../utils/constants';
@@ -70,12 +71,21 @@ export default function HomePage() {
 
           <div className="pt-2 flex flex-wrap items-center gap-3">
             <Link
-              to="/ruta-inexistente"
+              to="/registro"
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/25 transition-all cursor-pointer"
             >
-              <span>Verificar Ruta 404</span>
-              <ArrowRight className="w-4 h-4" />
+              <UserPlus className="w-4 h-4" />
+              <span>Crear Cuenta (T-34)</span>
             </Link>
+
+            <Link
+              to="/dominios"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-indigo-300 text-sm font-semibold border border-indigo-500/30 transition-all cursor-pointer"
+            >
+              <Globe className="w-4 h-4 text-emerald-400" />
+              <span>Administrar Dominios (T-35)</span>
+            </Link>
+
 
             <button
               onClick={handleTestClient}
@@ -83,7 +93,7 @@ export default function HomePage() {
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-sm font-medium border border-slate-700 transition-all cursor-pointer disabled:opacity-50"
             >
               <Server className="w-4 h-4 text-sky-400" />
-              <span>{testingClient ? 'Comprobando cliente HTTP...' : 'Probar Cliente HTTP Centralizado'}</span>
+              <span>{testingClient ? 'Comprobando cliente...' : 'Probar Cliente HTTP'}</span>
             </button>
           </div>
         </div>
