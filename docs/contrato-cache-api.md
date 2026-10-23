@@ -186,8 +186,8 @@ Detalles:
   La caché solo debe aceptar en `redirect` rutas relativas que empiecen con `/`, para no convertirse
   en un redireccionador abierto.
 - La cookie se llama `zc_session`.
-- **Cerrar sesión:** la UI llama a `DELETE /api/sessions` con el token. La sesión deja de ser válida
-  de inmediato.
+- **Cerrar sesión:** la UI llama a `DELETE /api/sessions` con el cuerpo
+  `{ "sessionToken": "st_..." }` y responde `204`. La sesión deja de ser válida de inmediato.
 
 ## 4. Endpoint público que usa la UI para iniciar sesión
 
