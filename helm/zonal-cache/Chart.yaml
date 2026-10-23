@@ -1,0 +1,6 @@
+apiVersion: v2
+name: zonal-cache
+description: Helm chart para el proxy/cache zonal HTTP en GNU C
+type: application
+version: 0.1.0
+appVersion: "1.0.0"
