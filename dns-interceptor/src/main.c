@@ -1,5 +1,6 @@
 #include "dns.h"
 #include "domains.h"
+#include "geo.h"
 
 #include <arpa/inet.h>
 #include <signal.h>
@@ -16,11 +17,44 @@ static void handle_signal(int sig) {
   g_running = 0;
 }
 
+/* Carga dominios y asocia sus cachés zonales desde variables de entorno */
+static void setup_registered_domains(const char *cache_cr, const char *cache_us,
+                                     const char *cache_default) {
+  domains_init();
+
+  const char *domains_env = getenv("CONFIG_DOMAINS");
+  if (domains_env && strlen(domains_env) > 0) {
+    char buffer[1024];
+    strncpy(buffer, domains_env, sizeof(buffer) - 1);
+    buffer[sizeof(buffer) - 1] = '\0';
+
+    char *token = strtok(buffer, ",; ");
+    while (token) {
+      domains_add(token, 300);
+      domains_add_zonal_cache(token, "CR", cache_cr);
+      domains_add_zonal_cache(token, "US", cache_us);
+      domains_add_zonal_cache(token, "DEFAULT", cache_default);
+      token = strtok(NULL, ",; ");
+    }
+  } else {
+    /* Dominios de prueba estándar si no se define CONFIG_DOMAINS */
+    domains_add("app.local", 300);
+    domains_add_zonal_cache("app.local", "CR", cache_cr);
+    domains_add_zonal_cache("app.local", "US", cache_us);
+    domains_add_zonal_cache("app.local", "DEFAULT", cache_default);
+
+    domains_add("api.redes.tec", 60);
+    domains_add_zonal_cache("api.redes.tec", "CR", cache_cr);
+    domains_add_zonal_cache("api.redes.tec", "US", cache_us);
+    domains_add_zonal_cache("api.redes.tec", "DEFAULT", cache_default);
+  }
+}
+
 int main(void) {
   signal(SIGINT, handle_signal);
   signal(SIGTERM, handle_signal);
 
-  /* Carga variables de entorno sin valores fijos en código */
+  /* Carga variables de entorno para red y servicios */
   const char *bind_addr_str = getenv("INTERCEPTOR_BIND_ADDR");
   if (!bind_addr_str)
     bind_addr_str = "0.0.0.0";
@@ -35,15 +69,22 @@ int main(void) {
   const char *upstream_port_env = getenv("UPSTREAM_DNS_PORT");
   int upstream_port = upstream_port_env ? atoi(upstream_port_env) : 53;
 
-  /* Registra dominios administrados y sus cachés zonales */
-  domains_init();
-  domains_add("app.local", 300);
-  domains_add_zonal_cache("app.local", "CR", "192.168.1.100");
-  domains_add_zonal_cache("app.local", "DEFAULT", "192.168.0.100");
+  /* Carga IPs de cachés zonales desde variables de entorno */
+  const char *cache_cr = getenv("ZONAL_CACHE_CR");
+  if (!cache_cr)
+    cache_cr = "192.168.1.100";
 
-  domains_add("api.redes.tec", 60);
-  domains_add_zonal_cache("api.redes.tec", "CR", "10.0.1.50");
-  domains_add_zonal_cache("api.redes.tec", "DEFAULT", "10.0.0.50");
+  const char *cache_us = getenv("ZONAL_CACHE_US");
+  if (!cache_us)
+    cache_us = "192.168.2.100";
+
+  const char *cache_default = getenv("ZONAL_CACHE_DEFAULT");
+  if (!cache_default)
+    cache_default = "192.168.0.100";
+
+  /* Inicializa geolocalización IP to Country y dominios administrados */
+  geo_init();
+  setup_registered_domains(cache_cr, cache_us, cache_default);
 
   int server_sock = socket(AF_INET, SOCK_DGRAM, 0);
   if (server_sock < 0) {
@@ -72,8 +113,10 @@ int main(void) {
   }
 
   printf("[DNS Interceptor] Escuchando en udp://%s:%d\n", bind_addr_str, port);
-  printf("[DNS Interceptor] Upstream recursivo configurado en %s:%d\n",
-         upstream_ip, upstream_port);
+  printf("[DNS Interceptor] Upstream recursivo en %s:%d\n", upstream_ip,
+         upstream_port);
+  printf("[DNS Interceptor] Caché Zonal CR: %s | US: %s | DEFAULT: %s\n",
+         cache_cr, cache_us, cache_default);
 
   uint8_t buffer[DNS_BUFFER_SIZE];
   uint8_t resp_buf[DNS_BUFFER_SIZE];
@@ -110,11 +153,15 @@ int main(void) {
 
     registered_domain_t dom_info;
     if (domains_is_registered(domain, &dom_info)) {
-      /* Resuelve la consulta apuntando a la caché zonal del dominio */
-      const char *cache_ip = domains_get_cache_ip_for_country(&dom_info, "CR");
-      printf("[DNS Interceptor] [INTERCEPTADO] Dominio '%s' -> Respondiendo "
-             "Caché Zonal IP %s\n",
-             domain, cache_ip);
+      /* Resuelve el país del cliente mediante la base IP to Country */
+      const char *country_code = geo_lookup_country(client_ip);
+      const char *cache_ip =
+          domains_get_cache_ip_for_country(&dom_info, country_code);
+
+      printf("[DNS Interceptor] [INTERCEPTADO] Dominio '%s' | Cliente: %s "
+             "(País: %s) -> Respondiendo Caché Zonal: %s\n",
+             domain, client_ip, country_code ? country_code : "DESCONOCIDO",
+             cache_ip);
 
       ssize_t resp_len =
           dns_build_response(buffer, (size_t)bytes_recv, cache_ip, dom_info.ttl,
