@@ -71,6 +71,42 @@ int main(void) {
     assert(cache_index_size(index) == 0);
     cache_index_destroy(index);
 
+    cache_entry_data_t policy_one = sample_entry();
+    cache_entry_data_t policy_two = sample_entry();
+    cache_entry_data_t policy_three = sample_entry();
+    cache_entry_data_t victim;
+    policy_one.url = "/one";
+    policy_two.url = "/two";
+    policy_three.url = "/three";
+    index = cache_index_create(2);
+    assert(index != NULL);
+    assert(cache_index_insert(index, &policy_one) == CACHE_OK);
+    assert(cache_index_insert(index, &policy_two) == CACHE_OK);
+    assert(cache_index_insert(index, &policy_three) == CACHE_OK);
+    assert(cache_index_touch(index, "example.com", "/one", 10) == CACHE_OK);
+    assert(cache_index_touch(index, "example.com", "/two", 20) == CACHE_OK);
+    assert(cache_index_touch(index, "example.com", "/two", 21) == CACHE_OK);
+    assert(cache_index_touch(index, "example.com", "/three", 30) == CACHE_OK);
+    assert(cache_index_touch(index, "example.com", "/three", 31) == CACHE_OK);
+    assert(cache_index_touch(index, "example.com", "/three", 32) == CACHE_OK);
+    assert(cache_index_select_victim(index, "example.com", CACHE_POLICY_LRU,
+                                     &victim) == CACHE_OK);
+    assert(strcmp(victim.url, "/one") == 0);
+    assert(cache_index_select_victim(index, "example.com", CACHE_POLICY_MRU,
+                                     &victim) == CACHE_OK);
+    assert(strcmp(victim.url, "/three") == 0);
+    assert(cache_index_select_victim(index, "example.com", CACHE_POLICY_LFU,
+                                     &victim) == CACHE_OK);
+    assert(strcmp(victim.url, "/one") == 0);
+    assert(cache_index_select_victim(index, "example.com", CACHE_POLICY_FIFO,
+                                     &victim) == CACHE_OK);
+    assert(strcmp(victim.url, "/one") == 0);
+    srand(7);
+    assert(cache_index_select_victim(index, "example.com", CACHE_POLICY_RANDOM,
+                                     &victim) == CACHE_OK);
+    assert(strcmp(victim.domain, "example.com") == 0);
+    cache_index_destroy(index);
+
     index = cache_index_create(2);
     cache_storage_t *storage = cache_storage_create("build/cache-test");
     const char content[] = "contenido de prueba\n";
@@ -108,6 +144,34 @@ int main(void) {
     assert(cache_store_purge_expired(index, storage, 100, &removed_count) == CACHE_OK);
     assert(removed_count == 1);
     assert(cache_index_size(index) == 0);
+    cache_storage_destroy(storage);
+    cache_index_destroy(index);
+
+    index = cache_index_create(2);
+    storage = cache_storage_create("build/cache-limit-test");
+    cache_domain_config_t domain_config = {
+        .max_size_bytes = 10,
+        .policy = CACHE_POLICY_FIFO
+    };
+    cache_entry_data_t limited_one = sample_entry();
+    cache_entry_data_t limited_two = sample_entry();
+    limited_one.url = "/limited-one";
+    limited_two.url = "/limited-two";
+    assert(index != NULL);
+    assert(storage != NULL);
+    assert(cache_store_put_configured(index, storage, &limited_one, "123456", 6,
+                                      &domain_config) == CACHE_OK);
+    assert(cache_index_domain_size(index, "example.com") == 6);
+    assert(cache_store_put_configured(index, storage, &limited_two, "12345", 5,
+                                      &domain_config) == CACHE_OK);
+    assert(cache_index_size(index) == 1);
+    assert(cache_index_get(index, "example.com", "/limited-one", &result) ==
+           CACHE_NOT_FOUND);
+    assert(cache_index_get(index, "example.com", "/limited-two", &result) == CACHE_OK);
+    assert(cache_index_domain_size(index, "example.com") == 5);
+    assert(cache_store_put_configured(index, storage, &limited_one,
+                                      "12345678901", 11, &domain_config) ==
+           CACHE_LIMIT_EXCEEDED);
     cache_storage_destroy(storage);
     cache_index_destroy(index);
     puts("Todas las pruebas del indice pasaron.");

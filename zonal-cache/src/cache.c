@@ -264,6 +264,92 @@ size_t cache_index_size(const cache_index_t *index) {
     return index == NULL ? 0 : index->entry_count;
 }
 
+size_t cache_index_domain_size(const cache_index_t *index,
+                               const char *domain) {
+    size_t bucket;
+    size_t total = 0;
+
+    if (index == NULL || domain == NULL) {
+        return 0;
+    }
+    for (bucket = 0; bucket < index->bucket_count; bucket++) {
+        cache_node_t *current = index->buckets[bucket];
+        while (current != NULL) {
+            if (strcmp(current->entry.domain, domain) == 0) {
+                if ((size_t)-1 - total < current->entry.size_bytes) {
+                    return (size_t)-1;
+                }
+                total += current->entry.size_bytes;
+            }
+            current = current->next;
+        }
+    }
+    return total;
+}
+
+static int valid_policy(cache_policy_t policy) {
+    return policy >= CACHE_POLICY_LRU && policy <= CACHE_POLICY_RANDOM;
+}
+
+static int entry_is_better_victim(const cache_entry_data_t *candidate,
+                                  const cache_entry_data_t *current,
+                                  cache_policy_t policy) {
+    if (policy == CACHE_POLICY_LRU) {
+        return candidate->last_accessed_at < current->last_accessed_at ||
+               (candidate->last_accessed_at == current->last_accessed_at &&
+                candidate->insertion_order < current->insertion_order);
+    }
+    if (policy == CACHE_POLICY_MRU) {
+        return candidate->last_accessed_at > current->last_accessed_at ||
+               (candidate->last_accessed_at == current->last_accessed_at &&
+                candidate->insertion_order > current->insertion_order);
+    }
+    if (policy == CACHE_POLICY_LFU) {
+        return candidate->access_count < current->access_count ||
+               (candidate->access_count == current->access_count &&
+                candidate->insertion_order < current->insertion_order);
+    }
+    return candidate->insertion_order < current->insertion_order;
+}
+
+cache_result_t cache_index_select_victim(const cache_index_t *index,
+                                         const char *domain,
+                                         cache_policy_t policy,
+                                         cache_entry_data_t *entry_out) {
+    size_t bucket;
+    size_t candidate_count = 0;
+    cache_node_t *victim = NULL;
+
+    if (index == NULL || domain == NULL || entry_out == NULL ||
+        !valid_policy(policy)) {
+        return CACHE_INVALID_ARGUMENT;
+    }
+    for (bucket = 0; bucket < index->bucket_count; bucket++) {
+        cache_node_t *current = index->buckets[bucket];
+        while (current != NULL) {
+            if (strcmp(current->entry.domain, domain) == 0) {
+                candidate_count++;
+                if (policy == CACHE_POLICY_RANDOM) {
+                    if (rand() % candidate_count == 0) {
+                        victim = current;
+                    }
+                } else if (victim == NULL || entry_is_better_victim(
+                                             &current->entry,
+                                             &victim->entry,
+                                             policy)) {
+                    victim = current;
+                }
+            }
+            current = current->next;
+        }
+    }
+    if (victim == NULL) {
+        return CACHE_NOT_FOUND;
+    }
+    *entry_out = victim->entry;
+    return CACHE_OK;
+}
+
 time_t cache_ttl_expiration(const cache_ttl_config_t *config,
                             const char *file_type,
                             time_t created_at) {
@@ -556,6 +642,7 @@ cache_result_t cache_store_put(cache_index_t *index,
     }
     indexed_entry = *entry;
     indexed_entry.file_path = path;
+    indexed_entry.size_bytes = data_size;
     /* Primero se registra la entrada y se revierte si el contenido no puede persistirse. */
     result = cache_index_insert(index, &indexed_entry);
     if (result != CACHE_OK) {
@@ -567,6 +654,44 @@ cache_result_t cache_store_put(cache_index_t *index,
         cache_index_remove(index, entry->domain, entry->url);
     }
     return result;
+}
+
+cache_result_t cache_store_put_configured(cache_index_t *index,
+                                          const cache_storage_t *storage,
+                                          const cache_entry_data_t *entry,
+                                          const void *data,
+                                          size_t data_size,
+                                          const cache_domain_config_t *config) {
+    cache_entry_data_t victim;
+    size_t domain_size;
+    cache_result_t result;
+
+    if (index == NULL || storage == NULL || entry == NULL || config == NULL ||
+        entry->domain == NULL || entry->url == NULL || !valid_policy(config->policy)) {
+        return CACHE_INVALID_ARGUMENT;
+    }
+    if (find_node(index, entry->domain, entry->url, NULL) != NULL) {
+        return CACHE_ALREADY_EXISTS;
+    }
+    if (config->max_size_bytes != 0 && data_size > config->max_size_bytes) {
+        return CACHE_LIMIT_EXCEEDED;
+    }
+    domain_size = cache_index_domain_size(index, entry->domain);
+    while (config->max_size_bytes != 0 &&
+           (domain_size > config->max_size_bytes - data_size)) {
+        /* Se expulsa una entrada completa por iteracion hasta liberar espacio. */
+        result = cache_index_select_victim(index, entry->domain,
+                                           config->policy, &victim);
+        if (result != CACHE_OK) {
+            return result;
+        }
+        result = cache_store_remove(index, storage, victim.domain, victim.url);
+        if (result != CACHE_OK) {
+            return result;
+        }
+        domain_size = cache_index_domain_size(index, entry->domain);
+    }
+    return cache_store_put(index, storage, entry, data, data_size);
 }
 
 cache_result_t cache_store_get(cache_index_t *index,
