@@ -1,0 +1,29 @@
+replicaCount: 1
+
+image:
+  repository: node-api
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 3000
+
+env:
+  PORT: "3000"
+  NODE_ENV: "production"
+  CORS_ORIGINS: "http://localhost:5173,http://cache.local,http://proxycache-ui"
+  INTERNAL_SERVICE_TOKEN: "internal-secret-token-ic7602"
+  SESSION_TTL_SECONDS: "3600"
+  FIREBASE_PROJECT_ID: ""
+  FIREBASE_CLIENT_EMAIL: ""
+  FIREBASE_PRIVATE_KEY: ""
+  FIREBASE_WEB_API_KEY: ""
+
+resources:
+  limits:
+    cpu: 300m
+    memory: 256Mi
+  requests:
+    cpu: 100m
+    memory: 128Mi

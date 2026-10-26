@@ -10,16 +10,19 @@ import {
   ArrowRight,
   Shield,
   Info,
-  Server
+  Server,
+  LogIn
 } from 'lucide-react';
 import StatusBadge from '../components/StatusBadge';
-import { validateRegistrationForm, registerAccount } from '../services/authService';
+import { validateRegistrationForm } from '../services/authService';
+import { useAuth } from '../hooks/useAuth';
 
 /**
  * Pantalla de registro de cuenta de usuario de la plataforma (T-34).
  * Administra la creación de usuarios para gestionar dominios y URLs según docs/modelo-datos.md.
  */
 export default function RegisterAccountPage() {
+  const { register } = useAuth();
   const [formData, setFormData] = useState({
     displayName: '',
     email: '',
@@ -55,11 +58,11 @@ export default function RegisterAccountPage() {
 
     setIsSubmitting(true);
 
-    const result = await registerAccount({
-      displayName: formData.displayName,
-      email: formData.email,
-      password: formData.password,
-    });
+    const result = await register(
+      formData.displayName,
+      formData.email,
+      formData.password
+    );
 
     setIsSubmitting(false);
 
@@ -67,8 +70,11 @@ export default function RegisterAccountPage() {
       setCreatedAccount({
         displayName: formData.displayName,
         email: formData.email,
-        uid: result.data?.uid || result.data?.id || 'uid_registrado',
+        uid: result.data?.uid || result.user?.uid || result.data?.id || 'uid_registrado',
         createdAt: new Date().toISOString(),
+        hasSession: Boolean(result.user),
+        autoLoginError: result.autoLoginError || null,
+        note: result.note || null,
       });
     } else {
       setSubmitError({
@@ -123,11 +129,24 @@ export default function RegisterAccountPage() {
               <span className="text-slate-400 font-sans">Correo electrónico (email):</span>
               <span className="text-indigo-300 font-semibold">{createdAccount.email}</span>
             </div>
-            <div className="flex flex-col sm:flex-row sm:justify-between py-1">
+            <div className="flex flex-col sm:flex-row sm:justify-between py-1 border-b border-slate-800/80">
               <span className="text-slate-400 font-sans">Identificador de cuenta (uid):</span>
               <span className="text-sky-300 font-semibold">{createdAccount.uid}</span>
             </div>
+            <div className="flex flex-col sm:flex-row sm:justify-between py-1">
+              <span className="text-slate-400 font-sans">Estado de sesión Firebase:</span>
+              <span className={createdAccount.hasSession ? "text-emerald-400 font-semibold" : "text-amber-300"}>
+                {createdAccount.hasSession ? "Autenticado con ID Token" : (createdAccount.note || "Requiere inicio de sesión")}
+              </span>
+            </div>
           </div>
+
+          {createdAccount.autoLoginError && (
+            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
+              <span>Cuenta creada. El inicio automático no se completó: {createdAccount.autoLoginError}. Puede iniciar sesión manualmente.</span>
+            </div>
+          )}
 
           <div className="pt-2 flex flex-wrap gap-3 justify-center sm:justify-start">
             <Link
@@ -137,12 +156,18 @@ export default function RegisterAccountPage() {
               <span>Continuar al Registro de Dominio</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
+            <Link
+              to="/dominios"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition-all cursor-pointer"
+            >
+              <span>Ver Mis Dominios</span>
+            </Link>
             <button
               onClick={() => {
                 setCreatedAccount(null);
                 setFormData({ displayName: '', email: '', password: '', confirmPassword: '' });
               }}
-              className="px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-sm font-medium transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-sm font-medium transition-all cursor-pointer"
             >
               Registrar otra cuenta
             </button>
@@ -347,6 +372,15 @@ export default function RegisterAccountPage() {
                   </>
                 )}
               </button>
+            </div>
+
+            <div className="pt-3 border-t border-slate-800/80 text-center">
+              <p className="text-xs text-slate-400">
+                ¿Ya dispone de una cuenta en la plataforma?{' '}
+                <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
+                  Iniciar Sesión
+                </Link>
+              </p>
             </div>
 
           </form>
