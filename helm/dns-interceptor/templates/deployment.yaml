@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-dns-interceptor
+  labels:
+    app: dns-interceptor
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: dns-interceptor
+  template:
+    metadata:
+      labels:
+        app: dns-interceptor
+    spec:
+      containers:
+        - name: dns-interceptor
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: dns-udp
+              containerPort: {{ .Values.service.port }}
+              protocol: UDP
+          env:
+            - name: INTERCEPTOR_BIND_ADDR
+              value: {{ .Values.env.interceptorBindAddr | quote }}
+            - name: INTERCEPTOR_UDP_PORT
+              value: {{ .Values.env.interceptorUdpPort | quote }}
+            - name: UPSTREAM_DNS_IP
+              value: {{ .Values.env.upstreamDnsIp | quote }}
+            - name: UPSTREAM_DNS_PORT
+              value: {{ .Values.env.upstreamDnsPort | quote }}
+            - name: ZONAL_CACHE_CR
+              value: {{ .Values.env.zonalCacheCr | quote }}
+            - name: ZONAL_CACHE_US
+              value: {{ .Values.env.zonalCacheUs | quote }}
+            - name: ZONAL_CACHE_DEFAULT
+              value: {{ .Values.env.zonalCacheDefault | quote }}
+            - name: CONFIG_DOMAINS
+              value: {{ .Values.env.configDomains | quote }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
