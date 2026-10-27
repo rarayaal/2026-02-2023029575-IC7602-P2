@@ -162,9 +162,86 @@ export async function registerAccount({ displayName, email, password }) {
   }
 }
 
+/**
+ * Obtiene el perfil de la persona usuaria autenticada (GET /users/me).
+ * Requiere Firebase ID token en Authorization: Bearer <idToken>.
+ *
+ * @returns {Promise<{ ok: boolean, status: number, data: any, error: string|null, code: string|null }>}
+ */
+export async function getUserProfile() {
+  try {
+    const res = await apiClient.get('/users/me');
+    if (!res.ok) {
+      const { message, code } = parseApiError(res);
+      return { ok: false, status: res.status, data: null, error: message, code };
+    }
+    return { ok: true, status: res.status, data: res.data, error: null, code: null };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      data: null,
+      error: err.message || 'Error al obtener el perfil de usuario',
+      code: 'CLIENT_EXCEPTION',
+    };
+  }
+}
+
+/**
+ * Actualiza el nombre para mostrar del usuario autenticado (PUT /users/me).
+ *
+ * @param {string} displayName
+ * @returns {Promise<{ ok: boolean, status: number, data: any, error: string|null, code: string|null }>}
+ */
+export async function updateUserProfile(displayName) {
+  try {
+    const res = await apiClient.put('/users/me', { displayName: displayName.trim() });
+    if (!res.ok) {
+      const { message, code } = parseApiError(res);
+      return { ok: false, status: res.status, data: null, error: message, code };
+    }
+    return { ok: true, status: res.status, data: res.data, error: null, code: null };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      data: null,
+      error: err.message || 'Error al actualizar el perfil',
+      code: 'CLIENT_EXCEPTION',
+    };
+  }
+}
+
+/**
+ * Elimina la cuenta del usuario autenticado en cascada con sus dominios (DELETE /users/me).
+ *
+ * @returns {Promise<{ ok: boolean, status: number, error: string|null, code: string|null }>}
+ */
+export async function deleteUserProfile() {
+  try {
+    const res = await apiClient.delete('/users/me');
+    if (!res.ok) {
+      const { message, code } = parseApiError(res);
+      return { ok: false, status: res.status, error: message, code };
+    }
+    return { ok: true, status: res.status, error: null, code: null };
+  } catch (err) {
+    return {
+      ok: false,
+      status: 0,
+      error: err.message || 'Error al eliminar la cuenta',
+      code: 'CLIENT_EXCEPTION',
+    };
+  }
+}
+
 export default {
   isValidEmail,
   validatePassword,
   validateRegistrationForm,
   registerAccount,
+  getUserProfile,
+  updateUserProfile,
+  deleteUserProfile,
 };
+

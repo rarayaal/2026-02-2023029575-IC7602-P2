@@ -1,0 +1,77 @@
+# ==============================================================================
+# Configuración global del stack IC-7602 (Umbrella Chart)
+# ==============================================================================
+global:
+  environment: production
+  domain: app.local
+
+dns-interceptor:
+  replicaCount: 1
+  image:
+    repository: dns-interceptor
+    tag: latest
+  service:
+    port: 53
+  env:
+    interceptorBindAddr: "0.0.0.0"
+    interceptorUdpPort: "53"
+    upstreamDnsIp: "8.8.8.8"
+    upstreamDnsPort: "53"
+    zonalCacheCr: "10.0.1.10"
+    zonalCacheUs: "10.0.2.10"
+    zonalCacheDefault: "10.0.0.10"
+    configDomains: "app.local,example.com"
+
+zonal-cache:
+  replicaCount: 1
+  image:
+    repository: zonal-cache
+    tag: latest
+  service:
+    port: 8080
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: cache.local
+        paths:
+          - path: /
+            pathType: Prefix
+  env:
+    PORT: "8080"
+    CACHE_DIR: "/var/cache/zonal-cache"
+    ORIGIN_HOST: "mock-origin"
+    ORIGIN_PORT: "80"
+    AUTH_MODE: "user_password"
+    # NOTA TECNICA (T-39/T-40): AUTH_UI_URL es la URL a la que el navegador del usuario es redirigido (302).
+    # No puede ser un hostname interno de Kubernetes (proxycache-ui) porque el navegador no lo resuelve.
+    # Por defecto usa localhost:5173 para port-forwarding/pruebas locales, o el Ingress/FQDN publico en produccion.
+    AUTH_UI_URL: "http://localhost:5173/cache-login"
+    CONFIG_API_URL: "http://proxycache-node-api:3000"
+    # SEGURIDAD: CONFIG_API_TOKEN debe coincidir con INTERNAL_SERVICE_TOKEN y cambiarse en produccion
+    CONFIG_API_TOKEN: "internal-secret-token-ic7602"
+    EXPECTED_API_KEY: ""
+
+node-api:
+  replicaCount: 1
+  image:
+    repository: node-api
+    tag: latest
+  service:
+    port: 3000
+  env:
+    PORT: "3000"
+    NODE_ENV: "production"
+    # SEGURIDAD: En produccion restringir CORS exclusivamente al dominio publico de la UI
+    CORS_ORIGINS: "http://localhost:5173,http://cache.local,http://proxycache-ui"
+    # SEGURIDAD: Reemplazar por un secreto de alta entropia en produccion
+    INTERNAL_SERVICE_TOKEN: "internal-secret-token-ic7602"
+    SESSION_TTL_SECONDS: "3600"
+
+ui:
+  replicaCount: 1
+  image:
+    repository: zonal-cache-ui
+    tag: latest
+  service:
+    port: 80

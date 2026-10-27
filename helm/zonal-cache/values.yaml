@@ -31,7 +31,7 @@ env:
   ORIGIN_HOST: "apache-service"
   ORIGIN_PORT: "80"
   AUTH_MODE: "api_key"
-  AUTH_UI_URL: "http://ui-service:5173/login"
+  AUTH_UI_URL: "http://localhost:5173/cache-login"
   CONFIG_API_URL: "http://node-api-service:3000"
   CONFIG_API_TOKEN: ""
   EXPECTED_API_KEY: ""
