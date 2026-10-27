@@ -53,6 +53,13 @@ jobs:
       - name: Run tests
         run: npm test
 
+      # La CLI de Vercel envía el autor del último commit y el plan Hobby bloquea el
+      # deployment si ese autor no es el dueño de la cuenta (por ejemplo, si otra
+      # persona hizo el merge). Sin el directorio .git, el deployment se atribuye
+      # solo al dueño del token.
+      - name: Remove git metadata
+        run: rm -rf "$GITHUB_WORKSPACE/.git"
+
       - name: Pull Vercel project settings
         run: npx --yes vercel@${VERCEL_CLI_VERSION} pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
 
