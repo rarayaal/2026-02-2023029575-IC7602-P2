@@ -9,7 +9,8 @@ import {
   ArrowRight, 
   AlertCircle,
   Code2,
-  UserPlus
+  UserPlus,
+  LogIn
 } from 'lucide-react';
 import { config } from '../utils/config';
 import { PROJECT_METADATA } from '../utils/constants';
@@ -71,21 +72,28 @@ export default function HomePage() {
 
           <div className="pt-2 flex flex-wrap items-center gap-3">
             <Link
-              to="/registro"
+              to="/dominios"
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/25 transition-all cursor-pointer"
+            >
+              <Globe className="w-4 h-4 text-emerald-300" />
+              <span>Administrar Dominios (T-35)</span>
+            </Link>
+
+            <Link
+              to="/registro"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-indigo-300 text-sm font-semibold border border-indigo-500/30 transition-all cursor-pointer"
             >
               <UserPlus className="w-4 h-4" />
               <span>Crear Cuenta (T-34)</span>
             </Link>
 
             <Link
-              to="/dominios"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-indigo-300 text-sm font-semibold border border-indigo-500/30 transition-all cursor-pointer"
+              to="/login"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-sm font-medium border border-slate-700 transition-all cursor-pointer"
             >
-              <Globe className="w-4 h-4 text-emerald-400" />
-              <span>Administrar Dominios (T-35)</span>
+              <LogIn className="w-4 h-4 text-indigo-400" />
+              <span>Iniciar Sesión</span>
             </Link>
-
 
             <button
               onClick={handleTestClient}
@@ -93,7 +101,7 @@ export default function HomePage() {
               className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-sm font-medium border border-slate-700 transition-all cursor-pointer disabled:opacity-50"
             >
               <Server className="w-4 h-4 text-sky-400" />
-              <span>{testingClient ? 'Comprobando cliente...' : 'Probar Cliente HTTP'}</span>
+              <span>{testingClient ? 'Comprobando cliente...' : 'Probar /api/health'}</span>
             </button>
           </div>
         </div>
@@ -222,6 +230,19 @@ export default function HomePage() {
           <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
             <span className="text-slate-400 block font-sans font-semibold">UI_PORT (Configurado):</span>
             <span className="text-amber-300 font-bold">{config.uiPort}</span>
+          </div>
+
+          <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1 md:col-span-2">
+            <span className="text-slate-400 block font-sans font-semibold">Firebase Authentication Web SDK:</span>
+            {config.isFirebaseConfigured ? (
+              <span className="text-emerald-400 font-bold">
+                ✓ Configurado (Project ID: {config.firebase.projectId})
+              </span>
+            ) : (
+              <span className="text-amber-400 font-bold italic">
+                ⚠️ Pendiente (requiere VITE_FIREBASE_API_KEY y VITE_FIREBASE_PROJECT_ID en .env)
+              </span>
+            )}
           </div>
         </div>
 

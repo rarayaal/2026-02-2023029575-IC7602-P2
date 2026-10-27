@@ -1,16 +1,155 @@
 services:
+  # ==========================================
+  # 1. UI - Frontend SPA (React + Vite + Tailwind + Nginx)
+  # ==========================================
   ui:
     container_name: zonal-cache-ui
     build:
       context: .
       dockerfile: Dockerfile
       args:
-        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-}
-        VITE_APP_TITLE: ${VITE_APP_TITLE:-}
-        VITE_APP_ENV: ${VITE_APP_ENV:-}
+        VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000/api}
+        VITE_APP_TITLE: ${VITE_APP_TITLE:-Proxy/Caché de Aplicación con Geolocalización}
+        VITE_APP_ENV: ${VITE_APP_ENV:-production}
         UI_PORT: ${UI_PORT:-5173}
+        VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY:-}
+        VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN:-}
+        VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID:-}
+        VITE_FIREBASE_STORAGE_BUCKET: ${VITE_FIREBASE_STORAGE_BUCKET:-}
+        VITE_FIREBASE_MESSAGING_SENDER_ID: ${VITE_FIREBASE_MESSAGING_SENDER_ID:-}
+        VITE_FIREBASE_APP_ID: ${VITE_FIREBASE_APP_ID:-}
     ports:
       - "${UI_PORT:-5173}:80"
     environment:
       - NODE_ENV=production
     restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+    networks:
+      - proxycache-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80/ || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # ==========================================
+  # 2. REST API - Backend Node.js / Express
+  # ==========================================
+  api:
+    container_name: zonal-cache-api
+    build:
+      context: ./node-api
+      dockerfile: Dockerfile
+    ports:
+      - "${API_PORT:-3000}:3000"
+    environment:
+      - PORT=3000
+      - NODE_ENV=${NODE_ENV:-production}
+      # SEGURIDAD: En produccion restringir CORS exclusivamente al dominio de la UI en Vercel
+      - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost,http://127.0.0.1:5173}
+      # SEGURIDAD: Reemplazar INTERNAL_SERVICE_TOKEN por un secreto criptografico de alta entropia en produccion
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:-internal-secret-token-ic7602}
+      - SESSION_TTL_SECONDS=${SESSION_TTL_SECONDS:-3600}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL:-}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY:-}
+      - FIREBASE_WEB_API_KEY=${FIREBASE_WEB_API_KEY:-}
+    restart: unless-stopped
+    networks:
+      - proxycache-net
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:3000/api/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+  # ==========================================
+  # 3. Zonal Cache - HTTP Proxy/Cache en GNU C
+  # ==========================================
+  zonal-cache:
+    container_name: zonal-cache-server
+    build:
+      context: ./zonal-cache
+      dockerfile: Dockerfile
+    ports:
+      - "${CACHE_PORT:-8080}:8080"
+    environment:
+      - PORT=8080
+      - CACHE_DIR=/var/cache/zonal-cache
+      - ORIGIN_HOST=${ORIGIN_HOST:-origin}
+      - ORIGIN_PORT=${ORIGIN_PORT:-80}
+      - AUTH_UI_URL=${AUTH_UI_URL:-http://localhost:5173/cache-login}
+      - CONFIG_API_URL=${CONFIG_API_URL:-http://api:3000}
+      # SEGURIDAD: Debe coincidir exactamente con INTERNAL_SERVICE_TOKEN del API
+      - CONFIG_API_TOKEN=${CONFIG_API_TOKEN:-internal-secret-token-ic7602}
+      - CONFIG_REFRESH_SECONDS=${CONFIG_REFRESH_SECONDS:-30}
+      - EXPECTED_API_KEY=${EXPECTED_API_KEY:-}
+    volumes:
+      - zonal-cache-data:/var/cache/zonal-cache
+    restart: unless-stopped
+    depends_on:
+      api:
+        condition: service_healthy
+      origin:
+        condition: service_started
+    networks:
+      proxycache-net:
+        ipv4_address: 172.28.0.10
+
+  # ==========================================
+  # 4. DNS Interceptor - DNS Proxy UDP con Geolocalización
+  # ==========================================
+  dns-interceptor:
+    container_name: zonal-dns-interceptor
+    build:
+      context: ./dns-interceptor
+      dockerfile: Dockerfile
+    ports:
+      - "${INTERCEPTOR_UDP_PORT:-53}:53/udp"
+    environment:
+      - INTERCEPTOR_BIND_ADDR=0.0.0.0
+      - INTERCEPTOR_UDP_PORT=53
+      - UPSTREAM_DNS_IP=${UPSTREAM_DNS_IP:-8.8.8.8}
+      - UPSTREAM_DNS_PORT=53
+      # NOTA TECNICA (T-40): dns_build_a_response (dns-interceptor/src/dns.c linea 169) invoca
+      # inet_pton(AF_INET, ip_str, &addr), el cual exige estrictamente una direccion IPv4 textual
+      # y falla si recibe un hostname. Por ello se inyecta la IP estatica asignada a zonal-cache (172.28.0.10).
+      - ZONAL_CACHE_CR=${ZONAL_CACHE_CR:-172.28.0.10}
+      - ZONAL_CACHE_US=${ZONAL_CACHE_US:-172.28.0.10}
+      - ZONAL_CACHE_DEFAULT=${ZONAL_CACHE_DEFAULT:-172.28.0.10}
+      - CONFIG_DOMAINS=${CONFIG_DOMAINS:-app.local,example.com}
+    restart: unless-stopped
+    depends_on:
+      - zonal-cache
+    networks:
+      - proxycache-net
+
+  # ==========================================
+  # 5. Origin Mock - Servidor origen para resolución de misses
+  # ==========================================
+  origin:
+    container_name: zonal-cache-origin
+    image: nginx:alpine
+    ports:
+      - "${ORIGIN_EXPOSE_PORT:-8081}:80"
+    restart: unless-stopped
+    networks:
+      - proxycache-net
+
+networks:
+  proxycache-net:
+    driver: bridge
+    name: proxycache-net
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/24
+          gateway: 172.28.0.1
+
+volumes:
+  zonal-cache-data:
+    name: zonal-cache-data
