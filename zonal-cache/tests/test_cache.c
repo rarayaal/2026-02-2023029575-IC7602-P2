@@ -33,6 +33,19 @@ int main(void) {
     };
     cache_entry_data_t ttl_entry = sample_entry();
     size_t removed_count = 0;
+    cache_entry_data_t victim;
+
+    assert(cache_index_create(0) == NULL);
+    assert(cache_index_size(NULL) == 0);
+    assert(cache_index_insert(NULL, NULL) == CACHE_INVALID_ARGUMENT);
+    assert(cache_index_get(NULL, NULL, NULL, NULL) == CACHE_INVALID_ARGUMENT);
+    assert(cache_index_remove(NULL, NULL, NULL) == CACHE_INVALID_ARGUMENT);
+    assert(cache_index_touch(NULL, NULL, NULL, 0) == CACHE_INVALID_ARGUMENT);
+    assert(cache_index_purge_expired(NULL, 0, NULL) == CACHE_INVALID_ARGUMENT);
+    assert(cache_storage_create(NULL) == NULL);
+    assert(cache_storage_path(NULL, NULL, NULL, NULL, 0) == CACHE_INVALID_ARGUMENT);
+    assert(cache_ttl_expiration(NULL, "html", 100) == 0);
+    assert(cache_entry_is_expired(NULL, 100) == 0);
 
     assert(cache_ttl_expiration(&ttl_config, "html", 100) == 160);
     assert(cache_ttl_expiration(&ttl_config, "css", 100) == 130);
@@ -71,10 +84,22 @@ int main(void) {
     assert(cache_index_size(index) == 0);
     cache_index_destroy(index);
 
+    index = cache_index_create(2);
+    assert(index != NULL);
+    assert(cache_index_select_victim(index, "missing.com", CACHE_POLICY_LRU,
+                                     &victim) == CACHE_NOT_FOUND);
+    assert(cache_index_select_victim(index, "missing.com", CACHE_POLICY_RANDOM,
+                                     &victim) == CACHE_NOT_FOUND);
+    assert(cache_index_select_victim(index, "missing.com", (cache_policy_t)99,
+                                     &victim) == CACHE_INVALID_ARGUMENT);
+    assert(cache_index_domain_size(index, "missing.com") == 0);
+    assert(cache_index_purge_expired(index, 100, &removed_count) == CACHE_OK);
+    assert(removed_count == 0);
+    cache_index_destroy(index);
+
     cache_entry_data_t policy_one = sample_entry();
     cache_entry_data_t policy_two = sample_entry();
     cache_entry_data_t policy_three = sample_entry();
-    cache_entry_data_t victim;
     policy_one.url = "/one";
     policy_two.url = "/two";
     policy_three.url = "/three";
@@ -115,6 +140,18 @@ int main(void) {
 
     assert(index != NULL);
     assert(storage != NULL);
+        assert(cache_storage_path(storage, "../escape", "/bad", (char[16]){0}, 16) ==
+            CACHE_INVALID_ARGUMENT);
+        assert(cache_storage_path(storage, "example.com", "/bad", (char[2]){0}, 2) ==
+            CACHE_BUFFER_TOO_SMALL);
+        assert(cache_storage_write(storage, "example.com", "/empty", NULL, 0) == CACHE_OK);
+        assert(cache_storage_read(storage, "example.com", "/empty", &loaded,
+                      &loaded_size) == CACHE_OK);
+        assert(loaded != NULL);
+        assert(loaded_size == 0);
+        free(loaded);
+        assert(cache_storage_read(storage, "example.com", "/missing", &loaded,
+                      &loaded_size) == CACHE_NOT_FOUND);
     entry = sample_entry();
     entry.expires_at = 0;
     assert(cache_store_put(index, storage, &entry, content,
@@ -172,6 +209,8 @@ int main(void) {
     assert(cache_store_put_configured(index, storage, &limited_one,
                                       "12345678901", 11, &domain_config) ==
            CACHE_LIMIT_EXCEEDED);
+    assert(cache_store_put_configured(index, storage, &limited_two, "x", 1,
+                                      &domain_config) == CACHE_ALREADY_EXISTS);
     cache_storage_destroy(storage);
     cache_index_destroy(index);
     puts("Todas las pruebas del indice pasaron.");
