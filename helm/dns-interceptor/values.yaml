@@ -1,0 +1,28 @@
+replicaCount: 1
+
+image:
+  repository: dns-interceptor
+  pullPolicy: IfNotPresent
+  tag: "latest"
+
+service:
+  type: ClusterIP
+  port: 53
+
+env:
+  interceptorBindAddr: "0.0.0.0"
+  interceptorUdpPort: "53"
+  upstreamDnsIp: "8.8.8.8"
+  upstreamDnsPort: "53"
+  zonalCacheCr: "10.0.1.10"
+  zonalCacheUs: "10.0.2.10"
+  zonalCacheDefault: "10.0.0.10"
+  configDomains: "app.local,api.redes.tec"
+
+resources:
+  limits:
+    cpu: 100m
+    memory: 128Mi
+  requests:
+    cpu: 50m
+    memory: 64Mi

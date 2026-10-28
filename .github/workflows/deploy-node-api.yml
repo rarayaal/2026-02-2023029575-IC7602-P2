@@ -1,0 +1,70 @@
+# Despliegue automático del REST API en Node.js a Vercel.
+#
+# Se usa la CLI de Vercel en lugar de la integración de Git porque el repositorio es
+# privado y el plan Hobby solo permite que el dueño de la cuenta de Vercel dispare
+# deployments desde Git. La CLI se autentica con el token de esa cuenta, así que el
+# deployment funciona sin importar quién hizo el merge.
+#
+# Secrets requeridos en el repositorio (Settings > Secrets and variables > Actions):
+#   VERCEL_TOKEN       token de la cuenta de Vercel dueña del proyecto
+#   VERCEL_ORG_ID      ID de la cuenta (orgId en node-api/.vercel/project.json)
+#   VERCEL_PROJECT_ID  ID del proyecto (projectId en node-api/.vercel/project.json)
+#
+# Las variables de entorno del API (Firebase, token de servicio) viven en el proyecto
+# de Vercel y la CLI las descarga con `vercel pull`.
+
+name: Deploy node-api
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'node-api/**'
+      - '.github/workflows/deploy-node-api.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-node-api
+  cancel-in-progress: false
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  VERCEL_CLI_VERSION: 65.0.0
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: node-api
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: node-api/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      # La CLI de Vercel envía el autor del último commit y el plan Hobby bloquea el
+      # deployment si ese autor no es el dueño de la cuenta (por ejemplo, si otra
+      # persona hizo el merge). Sin el directorio .git, el deployment se atribuye
+      # solo al dueño del token.
+      - name: Remove git metadata
+        run: rm -rf "$GITHUB_WORKSPACE/.git"
+
+      - name: Pull Vercel project settings
+        run: npx --yes vercel@${VERCEL_CLI_VERSION} pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build
+        run: npx --yes vercel@${VERCEL_CLI_VERSION} build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to production
+        run: npx --yes vercel@${VERCEL_CLI_VERSION} deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}

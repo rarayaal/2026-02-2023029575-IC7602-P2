@@ -371,10 +371,9 @@ time_t cache_ttl_expiration(const cache_ttl_config_t *config,
     if (ttl_seconds <= 0) {
         return 0;
     }
-    return created_at > (time_t)(~(time_t)0) - ttl_seconds
-               ? (time_t)(~(time_t)0)
-               : created_at + ttl_seconds;
+    return created_at + ttl_seconds;
 }
+
 
 int cache_entry_is_expired(const cache_entry_data_t *entry, time_t now) {
     if (entry == NULL || now < 0 || entry->expires_at == 0) {

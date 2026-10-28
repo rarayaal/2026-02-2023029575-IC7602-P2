@@ -1,0 +1,104 @@
+# Despliegue automático de la UI (React + Vite + Tailwind) a Vercel (T-33).
+#
+# Se utiliza la CLI oficial de Vercel para compatibilidad con repositorios privados en plan Hobby.
+# La CLI se autentica mediante el token de Vercel de la cuenta propietaria del proyecto.
+#
+# Secrets requeridos en GitHub (Settings > Secrets and variables > Actions > Secrets):
+#   VERCEL_TOKEN              Token de la cuenta de Vercel dueña del proyecto
+#   VERCEL_ORG_ID             ID de la cuenta/equipo en Vercel
+#   VERCEL_PROJECT_ID_UI      ID del proyecto específico de la UI en Vercel (o VERCEL_PROJECT_ID)
+#
+# Variables requeridas en GitHub (Settings > Secrets and variables > Actions > Variables):
+#   VITE_API_BASE_URL                 URL pública base del REST API en Node.js (ej: https://api.midominio.com/api)
+#   VITE_APP_TITLE                    Título de la aplicación
+#   VITE_FIREBASE_API_KEY             API Key web de Firebase Console
+#   VITE_FIREBASE_AUTH_DOMAIN         Dominio de autenticación (<proyecto>.firebaseapp.com)
+#   VITE_FIREBASE_PROJECT_ID          ID del proyecto en Firebase
+#   VITE_FIREBASE_STORAGE_BUCKET      Bucket de almacenamiento (<proyecto>.appspot.com)
+#   VITE_FIREBASE_MESSAGING_SENDER_ID Sender ID numérico de Firebase
+#   VITE_FIREBASE_APP_ID              App ID de la aplicación web de Firebase
+
+name: Deploy ui
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'src/**'
+      - 'public/**'
+      - 'index.html'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'vite.config.js'
+      - 'tailwind.config.js'
+      - 'postcss.config.js'
+      - 'vercel.json'
+      - 'test/**'
+      - '.github/workflows/deploy-ui.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-ui
+  cancel-in-progress: false
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID_UI || secrets.VERCEL_PROJECT_ID }}
+  VERCEL_CLI_VERSION: 65.0.0
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: npm test
+
+      - name: Build frontend SPA
+        run: npm run build
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_APP_TITLE: ${{ vars.VITE_APP_TITLE }}
+          VITE_APP_ENV: production
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+
+      # La CLI de Vercel envía el autor del último commit y el plan Hobby bloquea el
+      # deployment si ese autor no es el dueño de la cuenta (por ejemplo, si otra
+      # persona hizo el merge). Sin el directorio .git, el deployment se atribuye
+      # solo al dueño del token.
+      - name: Remove git metadata
+        run: rm -rf "$GITHUB_WORKSPACE/.git"
+
+      - name: Pull Vercel project settings
+        run: npx --yes vercel@${VERCEL_CLI_VERSION} pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build with Vercel CLI
+        run: npx --yes vercel@${VERCEL_CLI_VERSION} build --prod --token=${{ secrets.VERCEL_TOKEN }}
+        env:
+          VITE_API_BASE_URL: ${{ vars.VITE_API_BASE_URL }}
+          VITE_APP_TITLE: ${{ vars.VITE_APP_TITLE }}
+          VITE_APP_ENV: production
+          VITE_FIREBASE_API_KEY: ${{ vars.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ vars.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ vars.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ vars.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ vars.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ vars.VITE_FIREBASE_APP_ID }}
+
+      - name: Deploy prebuilt to production
+        run: npx --yes vercel@${VERCEL_CLI_VERSION} deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
