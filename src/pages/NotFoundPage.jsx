@@ -29,17 +29,17 @@ export default function NotFoundPage() {
 
         {/* Mensaje sobrio */}
         <p className="text-xs text-ink-muted">
-          Verifique la dirección introducida o vuelva a la página de inicio para continuar navegando.
+          Verifique la dirección introducida o regrese para continuar navegando.
         </p>
 
-        {/* Botón de retorno al inicio */}
+        {/* Botón de retorno */}
         <div className="pt-2">
           <Link
-            to="/"
+            to="/login"
             className="inline-flex items-center gap-2 px-4 py-2 rounded bg-forest hover:bg-forest-hover text-white text-xs sm:text-sm font-medium shadow-subtle transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Volver al inicio</span>
+            <span>Ir a Iniciar Sesión</span>
           </Link>
         </div>
 

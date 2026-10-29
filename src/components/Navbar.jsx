@@ -11,7 +11,7 @@ export default function Navbar() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/');
+    navigate('/login');
   };
 
   const navLinkClass = ({ isActive }) =>
@@ -30,7 +30,7 @@ export default function Navbar() {
           
           {/* Logo y título de producto en una sola línea */}
           <div className="flex items-center gap-3">
-            <NavLink to="/" className="flex items-center gap-2.5">
+            <NavLink to={currentUser ? "/dominios" : "/login"} className="flex items-center gap-2.5">
               <span className="w-2.5 h-2.5 rounded-full bg-forest inline-block" />
               <span className="font-serif text-xl font-bold tracking-tight text-ink">
                 ProxyCache
@@ -40,20 +40,19 @@ export default function Navbar() {
 
           {/* Navegación Desktop */}
           <nav className="hidden md:flex items-center gap-6">
-            <NavLink to="/" className={navLinkClass}>
-              Inicio
-            </NavLink>
-            <NavLink to="/dominios" className={navLinkClass}>
-              Dominios
-            </NavLink>
+            {currentUser && (
+              <>
+                <NavLink to="/dominios" className={navLinkClass}>
+                  Dominios
+                </NavLink>
+                <NavLink to="/dominios/nuevo" className={navLinkClass}>
+                  Nuevo Dominio
+                </NavLink>
+              </>
+            )}
             <NavLink to="/cache-login" className={navLinkClass}>
               Acceso a Caché
             </NavLink>
-            {currentUser && (
-              <NavLink to="/dominios/nuevo" className={navLinkClass}>
-                Nuevo Dominio
-              </NavLink>
-            )}
             {!currentUser && (
               <>
                 <NavLink to="/registro" className={navLinkClass}>
@@ -124,20 +123,15 @@ export default function Navbar() {
           )}
 
           <div className="flex flex-col space-y-2 text-sm">
-            <NavLink
-              to="/"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 text-ink-secondary hover:text-ink"
-            >
-              Inicio
-            </NavLink>
-            <NavLink
-              to="/dominios"
-              onClick={() => setMobileMenuOpen(false)}
-              className="py-1 text-ink-secondary hover:text-ink"
-            >
-              Dominios
-            </NavLink>
+            {currentUser && (
+              <NavLink
+                to="/dominios"
+                onClick={() => setMobileMenuOpen(false)}
+                className="py-1 text-ink-secondary hover:text-ink"
+              >
+                Dominios
+              </NavLink>
+            )}
             <NavLink
               to="/cache-login"
               onClick={() => setMobileMenuOpen(false)}

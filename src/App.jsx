@@ -19,7 +19,7 @@ export default function App() {
         <Routes>
           <Route path="/" element={<MainLayout />}>
             {/* Rutas Públicas */}
-            <Route index element={<HomePage />} />
+            <Route index element={<LoginPage />} />
             <Route path="login" element={<LoginPage />} />
             <Route path="iniciar-sesion" element={<LoginPage />} />
             <Route path="cache-login" element={<CacheLoginPage />} />
