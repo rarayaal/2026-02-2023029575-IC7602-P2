@@ -101,8 +101,8 @@ function parseApiError(res) {
 
   if (res.status === 404) {
     return {
-      message: 'El endpoint de registro de cuentas (/api/users) no está disponible en el servidor (Tarea T-27 pendiente en el backend).',
-      code: 'ENDPOINT_NOT_FOUND',
+      message: 'El recurso de usuario solicitado no fue encontrado en el servidor.',
+      code: 'NOT_FOUND',
     };
   }
 

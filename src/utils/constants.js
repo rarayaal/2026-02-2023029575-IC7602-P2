@@ -10,7 +10,7 @@ export const PROJECT_METADATA = {
   task: {
     id: 'T33',
     name: 'Estructura base de la UI',
-    status: 'Completada',
+    status: 'En progreso (despliegue en Vercel pendiente)',
     responsible: 'Alexandra De Gracia',
     studentId: '2026801601',
   },

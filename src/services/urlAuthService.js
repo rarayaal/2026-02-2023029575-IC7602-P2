@@ -16,15 +16,12 @@ import apiClient from './apiClient.js';
  */
 export function generateRawApiKey() {
   const bytes = new Uint8Array(32);
-  if (typeof window !== 'undefined' && window.crypto && window.crypto.getRandomValues) {
-    window.crypto.getRandomValues(bytes);
-  } else if (typeof globalThis !== 'undefined' && globalThis.crypto && globalThis.crypto.getRandomValues) {
-    globalThis.crypto.getRandomValues(bytes);
+  const cryptoObj = (typeof window !== 'undefined' && window.crypto) || (typeof globalThis !== 'undefined' && globalThis.crypto);
+
+  if (cryptoObj && typeof cryptoObj.getRandomValues === 'function') {
+    cryptoObj.getRandomValues(bytes);
   } else {
-    // Fallback pseudoaleatorio compatible
-    for (let i = 0; i < 32; i++) {
-      bytes[i] = Math.floor(Math.random() * 256);
-    }
+    throw new Error('Generador criptográfico seguro no disponible (crypto.getRandomValues no encontrado). Por seguridad no se permite el uso de generadores pseudoaleatorios inseguros para credenciales de acceso.');
   }
 
   const hex = Array.from(bytes)
@@ -61,13 +58,13 @@ export async function hashSha256(text) {
   const data = encoder.encode(text);
 
   const subtle = (typeof window !== 'undefined' && window.crypto?.subtle) || globalThis.crypto?.subtle;
-  if (subtle) {
+  if (subtle && typeof subtle.digest === 'function') {
     const hashBuffer = await subtle.digest('SHA-256', data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   }
 
-  throw new Error('El entorno no cuenta con soporte para WebCrypto Subtle (crypto.subtle).');
+  throw new Error('La API WebCrypto (crypto.subtle) no está disponible en este entorno. Los navegadores web restringen las funciones criptográficas de SubtleCrypto a contextos seguros (HTTPS o http://localhost). Si accede mediante una dirección IP o nombre de host HTTP sin cifrar, acceda a través de localhost o active HTTPS en su servidor web.');
 }
 
 /**
@@ -114,6 +111,9 @@ export function validateUrlUsername(username) {
 
 /**
  * Valida la contraseña para un usuario de URL protegida.
+ * Según docs/modelo-datos.md y node-api/src/lib/validation.js:
+ * "Field password must have between 6 and 128 characters"
+ *
  * @param {string} password
  * @returns {{ valid: boolean, error: string|null }}
  */
@@ -124,6 +124,9 @@ export function validateUrlUserPassword(password) {
   if (password.length < 6) {
     return { valid: false, error: 'La contraseña debe tener al menos 6 caracteres' };
   }
+  if (password.length > 128) {
+    return { valid: false, error: 'La contraseña no puede superar los 128 caracteres' };
+  }
   return { valid: true, error: null };
 }
 
@@ -132,37 +135,30 @@ export function validateUrlUserPassword(password) {
  * @param {any} res
  * @returns {{ message: string, code: string|null }}
  */
-function parseUrlAuthApiError(res) {
+export function parseUrlAuthApiError(res) {
   if (!res) return { message: 'Error desconocido de comunicación', code: null };
 
   const data = res.data;
-  if (data && typeof data === 'object') {
-    if (data.error && typeof data.error === 'object') {
-      return {
-        message: data.error.message || `Error del servidor (${data.error.code || res.status})`,
-        code: data.error.code || null,
-      };
-    }
-    if (data.error && typeof data.error === 'string') {
-      return { message: data.error, code: null };
-    }
-    if (data.message && typeof data.message === 'string') {
-      return { message: data.message, code: null };
-    }
+  const errorCode = data?.error?.code || null;
+  const serverMsg = data?.error?.message || (typeof data?.error === 'string' ? data.error : data?.message);
+
+  if (res.status === 404 || errorCode === 'NOT_FOUND' || errorCode === 'API_KEY_NOT_FOUND' || errorCode === 'USER_NOT_FOUND') {
+    let message = 'La credencial o recurso solicitado no fue encontrado en el servidor.';
+    if (errorCode === 'API_KEY_NOT_FOUND') message = 'La API key solicitada no existe para esta URL.';
+    if (errorCode === 'USER_NOT_FOUND') message = 'El usuario solicitado no fue encontrado en esta URL.';
+    return { message: serverMsg || message, code: errorCode || 'NOT_FOUND' };
   }
 
-  if (res.status === 404) {
-    return {
-      message: 'El endpoint de credenciales no está disponible en el servidor (Tarea T-30 pendiente en el backend).',
-      code: 'ENDPOINT_NOT_FOUND',
-    };
+  if (res.status === 409 || errorCode === 'API_KEY_ALREADY_EXISTS' || errorCode === 'USER_ALREADY_EXISTS' || errorCode === 'AUTH_TYPE_MISMATCH') {
+    let message = 'Ya existe una credencial registrada con este identificador para esta URL.';
+    if (errorCode === 'API_KEY_ALREADY_EXISTS') message = 'Ya existe una API key registrada con este hash en la URL.';
+    if (errorCode === 'USER_ALREADY_EXISTS') message = 'Ya existe un usuario con este nombre de usuario para esta URL.';
+    if (errorCode === 'AUTH_TYPE_MISMATCH') message = 'El mecanismo de autenticación de la URL no coincide con la credencial solicitada.';
+    return { message: serverMsg || message, code: errorCode || 'RESOURCE_ALREADY_EXISTS' };
   }
 
-  if (res.status === 409) {
-    return {
-      message: 'Ya existe una credencial registrada con este identificador para esta URL.',
-      code: 'RESOURCE_ALREADY_EXISTS',
-    };
+  if (serverMsg) {
+    return { message: serverMsg, code: errorCode };
   }
 
   if (res.error) {

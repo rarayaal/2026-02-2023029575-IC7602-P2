@@ -5,7 +5,6 @@ import {
   Copy, 
   Check, 
   RefreshCw, 
-  ExternalLink,
   Info,
   Clock,
   AlertTriangle
@@ -13,13 +12,13 @@ import {
 import { getDnsTxtSpec, requestDomainTxtVerification } from '../services/domainService';
 
 /**
- * Componente interactivo para mostrar y gestionar la verificación de propiedad
+ * Componente para mostrar y gestionar la verificación de propiedad
  * de un dominio mediante registro DNS TXT (_proxycache-verify.<domain>).
- * Basado en docs/modelo-datos.md (T-34).
  */
 export default function DomainVerificationCard({ 
   domain, 
-  verificationToken, 
+  verificationToken = null, 
+  txtRecord = null,
   initialStatus = 'pending',
   verifiedAt = null,
   onVerificationChange = null 
@@ -30,7 +29,13 @@ export default function DomainVerificationCard({
   const [checking, setChecking] = useState(false);
   const [checkResult, setCheckResult] = useState(null);
 
-  const dnsSpec = getDnsTxtSpec(domain, verificationToken || 'TOKEN_PENDIENTE');
+  const dnsSpec = txtRecord
+    ? {
+        recordHost: txtRecord.name || txtRecord.recordHost || `_proxycache-verify.${domain}`,
+        recordType: txtRecord.type || txtRecord.recordType || 'TXT',
+        recordValue: txtRecord.value || txtRecord.recordValue || (verificationToken ? `proxycache-verification=${verificationToken}` : ''),
+      }
+    : getDnsTxtSpec(domain, verificationToken || '');
 
   const copyToClipboard = async (text, fieldName) => {
     try {
@@ -55,7 +60,7 @@ export default function DomainVerificationCard({
       setTimestamp(now);
       setCheckResult({
         success: true,
-        message: '¡Verificación exitosa! La propiedad del dominio ha sido comprobada mediante el registro DNS TXT.',
+        message: 'Verificación exitosa. La propiedad del dominio ha sido comprobada mediante el registro DNS TXT.',
       });
       if (onVerificationChange) onVerificationChange({ status: 'verified', verifiedAt: now });
     } else if (res.ok && !res.verified) {
@@ -63,7 +68,7 @@ export default function DomainVerificationCard({
       setCheckResult({
         success: false,
         isPendingPropagation: true,
-        message: 'No se encontró el registro TXT o el valor aún no coincide. Los cambios de DNS pueden tardar algunos minutos en propagarse. Intente nuevamente en breve.',
+        message: 'No se encontró el registro TXT o el valor aún no coincide. Los cambios en el DNS pueden tardar varios minutos en propagarse.',
       });
     } else {
       setCheckResult({
@@ -78,34 +83,36 @@ export default function DomainVerificationCard({
   const isVerified = status === 'verified';
 
   return (
-    <div className={`p-6 rounded-2xl glass-panel border transition-all ${
-      isVerified ? 'border-emerald-500/40 bg-emerald-950/10' : 'border-slate-800'
+    <div className={`p-6 rounded-lg border transition-all ${
+      isVerified 
+        ? 'border-forest/30 bg-forest-subtle/50' 
+        : 'border-surface-border bg-surface shadow-card'
     }`}>
       {/* Encabezado del estado de verificación */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800/80">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-surface-border">
         <div className="flex items-center gap-3">
-          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+          <div className={`w-9 h-9 rounded flex items-center justify-center shrink-0 ${
             isVerified 
-              ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' 
-              : 'bg-amber-500/15 text-amber-400 border border-amber-500/30'
+              ? 'bg-forest-subtle text-forest border border-forest/30' 
+              : 'bg-amberState-subtle text-amberState border border-amberState-border'
           }`}>
-            {isVerified ? <ShieldCheck className="w-5 h-5" /> : <ShieldAlert className="w-5 h-5" />}
+            {isVerified ? <ShieldCheck className="w-4 h-4" /> : <ShieldAlert className="w-4 h-4" />}
           </div>
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-white text-base font-mono">{domain}</h3>
-              <span className={`text-[11px] font-semibold px-2 py-0.5 rounded-full border ${
+              <h3 className="font-mono text-sm font-semibold text-ink">{domain}</h3>
+              <span className={`text-[11px] font-medium px-2 py-0.5 rounded border ${
                 isVerified 
-                  ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60'
-                  : 'bg-amber-950/80 text-amber-300 border-amber-700/60'
+                  ? 'bg-forest-subtle text-forest border-forest/30'
+                  : 'bg-amberState-subtle text-amberState border-amberState-border'
               }`}>
-                {isVerified ? 'Dominio Verificado' : 'Verificación TXT Pendiente'}
+                {isVerified ? 'Dominio verificado' : 'Verificación TXT pendiente'}
               </span>
             </div>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-ink-muted mt-0.5">
               {isVerified 
                 ? `Propiedad validada el ${timestamp ? new Date(timestamp).toLocaleString() : 'recientemente'}`
-                : 'Se requiere validar la propiedad mediante registro DNS antes de su activación en el proxy'}
+                : 'Se requiere validar la propiedad mediante registro DNS antes de su activación'}
             </p>
           </div>
         </div>
@@ -116,25 +123,25 @@ export default function DomainVerificationCard({
             onClick={handleVerify}
             disabled={checking}
             id="verify-domain-button"
-            className="inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold transition-all shadow-md shadow-indigo-600/20 disabled:opacity-50 cursor-pointer"
+            className="inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded bg-forest hover:bg-forest-hover text-white text-xs font-medium transition-colors shadow-subtle disabled:opacity-50 cursor-pointer"
           >
-            <RefreshCw className={`w-4 h-4 ${checking ? 'animate-spin' : ''}`} />
-            <span>{checking ? 'Comprobando DNS...' : 'Comprobar Verificación TXT'}</span>
+            <RefreshCw className={`w-3.5 h-3.5 ${checking ? 'animate-spin' : ''}`} />
+            <span>{checking ? 'Comprobando DNS...' : 'Comprobar registro TXT'}</span>
           </button>
         )}
       </div>
 
       {/* Resultado de la comprobación */}
       {checkResult && (
-        <div className={`mt-4 p-3.5 rounded-xl border text-xs leading-relaxed flex items-start gap-2.5 ${
+        <div className={`mt-4 p-3.5 rounded border text-xs leading-relaxed flex items-start gap-2.5 ${
           checkResult.success 
-            ? 'bg-emerald-950/60 border-emerald-800 text-emerald-200' 
+            ? 'bg-forest-subtle border-forest/30 text-forest' 
             : checkResult.isPendingPropagation
-            ? 'bg-amber-950/60 border-amber-800 text-amber-200'
-            : 'bg-rose-950/60 border-rose-800 text-rose-200'
+            ? 'bg-amberState-subtle border-amberState-border text-amberState'
+            : 'bg-roseState-subtle border-roseState-border text-roseState'
         }`}>
           {checkResult.success ? (
-            <ShieldCheck className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+            <ShieldCheck className="w-4 h-4 shrink-0 mt-0.5 text-forest" />
           ) : (
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
           )}
@@ -148,65 +155,65 @@ export default function DomainVerificationCard({
       {/* Bloque con las instrucciones del registro DNS TXT si aún está pendiente */}
       {!isVerified && (
         <div className="mt-5 space-y-4">
-          <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 text-xs text-slate-300 flex items-start gap-2.5">
-            <Info className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
+          <div className="p-3.5 rounded bg-surface-subtle border border-surface-border text-xs text-ink-secondary flex items-start gap-2.5">
+            <Info className="w-4 h-4 text-forest shrink-0 mt-0.5" />
             <div className="space-y-1">
-              <span className="font-semibold text-slate-200 block">Instrucciones de configuración DNS:</span>
-              <p className="text-slate-400 text-[11px] leading-relaxed">
-                Acceda al panel de control de su proveedor DNS (ej. Cloudflare, Route 53, GoDaddy) y agregue el siguiente registro TXT en la zona del dominio. El Zonal Cache y el DNS Interceptor únicamente interceptarán dominios verificados.
+              <span className="font-semibold text-ink block">Instrucciones de configuración DNS:</span>
+              <p className="text-ink-secondary text-[11px] leading-relaxed">
+                Acceda al panel de su proveedor DNS y agregue el siguiente registro TXT en la zona del dominio. El sistema validará este valor antes de habilitar la caché perimetral.
               </p>
             </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs font-mono">
             {/* Host / Nombre */}
-            <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/90 flex flex-col justify-between gap-1">
-              <div className="flex items-center justify-between text-[11px] font-sans text-slate-400">
-                <span>Nombre del Host (Host / Name):</span>
+            <div className="p-3 rounded bg-surface-subtle border border-surface-border flex flex-col justify-between gap-1">
+              <div className="flex items-center justify-between text-[11px] font-sans text-ink-muted">
+                <span>Nombre del Host:</span>
                 <button
                   type="button"
                   onClick={() => copyToClipboard(dnsSpec.recordHost, 'host')}
-                  className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition-colors"
+                  className="text-ink-muted hover:text-ink p-1 rounded hover:bg-surface transition-colors"
                   title="Copiar nombre de host"
                 >
-                  {copiedField === 'host' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copiedField === 'host' ? <Check className="w-3.5 h-3.5 text-forest" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>
               </div>
-              <span className="text-sky-300 font-semibold break-all text-[11px]">
+              <span className="text-ink font-semibold break-all text-[11px]">
                 {dnsSpec.recordHost}
               </span>
             </div>
 
             {/* Tipo */}
-            <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/90 flex flex-col justify-between gap-1">
-              <span className="text-[11px] font-sans text-slate-400">Tipo de Registro:</span>
-              <span className="text-emerald-400 font-bold text-sm">
+            <div className="p-3 rounded bg-surface-subtle border border-surface-border flex flex-col justify-between gap-1">
+              <span className="text-[11px] font-sans text-ink-muted">Tipo de Registro:</span>
+              <span className="text-forest font-bold text-sm">
                 TXT
               </span>
             </div>
 
             {/* Valor esperado */}
-            <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/90 flex flex-col justify-between gap-1">
-              <div className="flex items-center justify-between text-[11px] font-sans text-slate-400">
-                <span>Valor del Registro (TXT Value):</span>
+            <div className="p-3 rounded bg-surface-subtle border border-surface-border flex flex-col justify-between gap-1">
+              <div className="flex items-center justify-between text-[11px] font-sans text-ink-muted">
+                <span>Valor del Registro:</span>
                 <button
                   type="button"
                   onClick={() => copyToClipboard(dnsSpec.recordValue, 'value')}
-                  className="text-slate-400 hover:text-white p-1 rounded hover:bg-slate-800 transition-colors"
+                  className="text-ink-muted hover:text-ink p-1 rounded hover:bg-surface transition-colors"
                   title="Copiar valor TXT"
                 >
-                  {copiedField === 'value' ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  {copiedField === 'value' ? <Check className="w-3.5 h-3.5 text-forest" /> : <Copy className="w-3.5 h-3.5" />}
                 </button>
               </div>
-              <span className="text-amber-300 font-semibold break-all text-[11px]">
+              <span className="text-ink font-semibold break-all text-[11px]">
                 {dnsSpec.recordValue}
               </span>
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-sans pt-1">
-            <Clock className="w-3.5 h-3.5 text-slate-500" />
-            <span>Nota técnica: La validación sintáctica del nombre no otorga propiedad. El backend consulta el registro DNS en tiempo real.</span>
+          <div className="flex items-center gap-1.5 text-[11px] text-ink-muted font-sans pt-1">
+            <Clock className="w-3.5 h-3.5 text-ink-muted" />
+            <span>Nota: La validación de propiedad requiere que el registro DNS esté disponible públicamente.</span>
           </div>
         </div>
       )}

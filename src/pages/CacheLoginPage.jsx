@@ -1,18 +1,9 @@
 /**
- * Formulario de autenticación y gestión de sesión para Cachés Zonales (T-39).
+ * Formulario de autenticación y gestión de sesión para Cachés Zonales.
  * 
  * Permite a los usuarios de URLs protegidas mediante autenticación user_password
  * identificarse ante la plataforma, recibir el token de sesión emitido por el backend
  * y redirigirse de vuelta a la caché zonal para que ésta escriba la cookie zc_session.
- * 
- * Flujo de ejecución (docs/contrato-cache-api.md §3):
- * 1. Zonal Cache detecta petición sin cookie a URL protegida.
- * 2. Zonal Cache envía 302 a: /login?domain=...&urlId=...&redirect=...
- * 3. Este componente captura los query params y presenta el formulario.
- * 4. Al enviar, llama a POST /api/sessions ({ domain, urlId, username, password }).
- * 5. Con el sessionToken, redirige a:
- *    http://<domain>/__zc/session?token=<st_...>&redirect=<redirect>
- * 6. También provee funcionalidad directa para cerrar sesión (DELETE /api/sessions).
  */
 
 import React, { useState, useEffect } from 'react';
@@ -147,6 +138,7 @@ export default function CacheLoginPage() {
       password: formData.password,
     });
     setIsSubmitting(false);
+    setFormData((prev) => ({ ...prev, password: '' }));
 
     if (result.ok) {
       const redirectUrl = buildCacheRedirectUrl(
@@ -198,28 +190,27 @@ export default function CacheLoginPage() {
     <div className="max-w-xl mx-auto space-y-6 animate-fadeIn py-6 px-4 sm:px-0">
       
       {/* Encabezado y Badges */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-800">
+      <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-surface-border">
         <div className="flex items-center gap-2">
           <StatusBadge label="Caché Zonal" status="success" />
-          <span className="text-xs text-slate-400 font-mono">T-39</span>
         </div>
-        <div className="text-xs text-slate-400">
+        <div className="text-xs text-ink-secondary font-medium">
           Autenticación de URL Protegida
         </div>
       </div>
 
       {/* Tarjeta de Sesión Activa (si existe) */}
       {activeSession && (
-        <div className="p-6 rounded-3xl glass-panel border border-emerald-500/30 bg-emerald-950/10 space-y-5">
+        <div className="p-6 rounded-lg bg-surface shadow-card border border-forest/30 bg-forest-subtle/30 space-y-5">
           <div className="flex items-start justify-between gap-4">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 flex items-center justify-center shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-forest-subtle text-forest border border-forest/30 flex items-center justify-center shrink-0">
                 <CheckCircle2 className="w-5 h-5" />
               </div>
               <div>
-                <h2 className="text-base font-bold text-white">Sesión Activa de Caché</h2>
-                <p className="text-xs text-slate-300">
-                  Usuario autenticado: <span className="font-mono text-emerald-300 font-semibold">{activeSession.username}</span>
+                <h2 className="font-serif text-lg font-bold text-ink">Sesión Activa de Caché</h2>
+                <p className="text-xs text-ink-secondary">
+                  Usuario autenticado: <span className="font-mono text-forest font-semibold">{activeSession.username}</span>
                 </p>
               </div>
             </div>
@@ -227,7 +218,7 @@ export default function CacheLoginPage() {
               onClick={handleLogout}
               disabled={isLoggingOut}
               id="cache-logout-button"
-              className="px-3.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-300 border border-rose-500/30 text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+              className="px-3 py-1.5 rounded bg-surface hover:bg-surface-subtle text-roseState border border-surface-border text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer disabled:opacity-50"
             >
               {isLoggingOut ? (
                 <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -238,25 +229,25 @@ export default function CacheLoginPage() {
             </button>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-slate-900/60 p-3.5 rounded-2xl border border-slate-800">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs bg-surface-subtle p-3.5 rounded-lg border border-surface-border">
             <div>
-              <span className="text-slate-400 block text-[11px]">Dominio:</span>
-              <span className="text-slate-200 font-mono font-medium">{activeSession.domain}</span>
+              <span className="text-ink-muted block text-[11px] font-medium">Dominio:</span>
+              <span className="text-ink font-mono font-medium">{activeSession.domain}</span>
             </div>
             <div>
-              <span className="text-slate-400 block text-[11px]">Identificador de URL:</span>
-              <span className="text-slate-200 font-mono font-medium">{activeSession.urlId}</span>
+              <span className="text-ink-muted block text-[11px] font-medium">Identificador de URL:</span>
+              <span className="text-ink font-mono font-medium">{activeSession.urlId}</span>
             </div>
             <div className="sm:col-span-2">
-              <span className="text-slate-400 block text-[11px]">Token de Sesión (hash seguro):</span>
-              <span className="text-indigo-300 font-mono text-[11px] break-all">
+              <span className="text-ink-muted block text-[11px] font-medium">Token de Sesión:</span>
+              <span className="text-forest font-mono text-[11px] break-all">
                 {activeSession.sessionToken ? `${activeSession.sessionToken.slice(0, 16)}...` : '(sin token)'}
               </span>
             </div>
             {activeSession.expiresAt && (
               <div className="sm:col-span-2">
-                <span className="text-slate-400 block text-[11px]">Expiración programada:</span>
-                <span className="text-slate-300 font-mono text-[11px]">
+                <span className="text-ink-muted block text-[11px] font-medium">Expiración programada:</span>
+                <span className="text-ink-secondary font-mono text-[11px]">
                   {new Date(activeSession.expiresAt).toLocaleString()}
                 </span>
               </div>
@@ -267,15 +258,15 @@ export default function CacheLoginPage() {
 
       {/* Banner de Éxito al Generar Sesión */}
       {sessionSuccess && (
-        <div className="p-6 rounded-3xl glass-panel border border-indigo-500/40 bg-indigo-950/20 space-y-4 animate-fadeIn">
+        <div className="p-6 rounded-lg bg-surface shadow-card border border-forest/30 bg-forest-subtle/40 space-y-4 animate-fadeIn">
           <div className="flex items-start gap-3">
-            <div className="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-400 border border-indigo-500/30 flex items-center justify-center shrink-0 mt-0.5">
+            <div className="w-9 h-9 rounded bg-forest-subtle text-forest border border-forest/30 flex items-center justify-center shrink-0 mt-0.5">
               <CheckCircle2 className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="text-sm font-bold text-white">Sesión Generada con Éxito</h3>
-              <p className="text-xs text-indigo-200/90 mt-0.5">
-                El token de sesión fue emitido por el backend. Redirigiendo a la caché zonal para fijar la cookie <code className="font-mono text-indigo-100">zc_session</code>.
+              <h3 className="font-serif text-sm font-bold text-ink">Sesión Generada con Éxito</h3>
+              <p className="text-xs text-ink-secondary mt-0.5">
+                El token de sesión fue emitido por el backend. Redirigiendo a la caché zonal para fijar la cookie <code className="font-mono text-forest font-semibold">zc_session</code>.
               </p>
             </div>
           </div>
@@ -284,7 +275,7 @@ export default function CacheLoginPage() {
             <a
               href={sessionSuccess.redirectUrl}
               id="continue-to-cache-link"
-              className="w-full py-2.5 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 cursor-pointer"
+              className="w-full py-2.5 px-4 rounded bg-forest hover:bg-forest-hover text-white shadow-subtle font-medium text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer"
             >
               <span>Continuar hacia {sessionSuccess.targetDomain}{sessionSuccess.targetRedirect}</span>
               <ExternalLink className="w-3.5 h-3.5" />
@@ -295,34 +286,34 @@ export default function CacheLoginPage() {
 
       {/* Mensaje de cierre de sesión exitoso */}
       {logoutMessage && (
-        <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-200 text-xs flex items-center gap-2.5">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+        <div className="p-3.5 rounded bg-forest-subtle border border-forest/30 text-forest text-xs font-medium flex items-center gap-2.5">
+          <CheckCircle2 className="w-4 h-4 text-forest shrink-0" />
           <span>{logoutMessage}</span>
         </div>
       )}
 
       {/* Mensaje de error general */}
       {loginError && (
-        <div className="p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 text-rose-200 text-xs flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+        <div className="p-4 rounded bg-roseState-subtle border border-roseState-border text-roseState text-xs flex items-start gap-3">
+          <AlertCircle className="w-5 h-5 text-roseState shrink-0 mt-0.5" />
           <div className="space-y-1">
-            <div className="font-semibold text-white">Error en autenticación</div>
-            <p className="text-rose-200/90 leading-relaxed">{loginError}</p>
+            <div className="font-semibold text-roseState">Error en autenticación</div>
+            <p className="text-xs leading-relaxed">{loginError}</p>
           </div>
         </div>
       )}
 
       {/* Formulario Principal de Autenticación */}
-      <div className="p-6 sm:p-8 rounded-3xl glass-panel border border-slate-800 space-y-6">
+      <div className="p-6 sm:p-8 rounded-lg bg-surface shadow-card border border-surface-border space-y-6">
         
         <div className="space-y-2">
-          <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center">
-            <ShieldCheck className="w-6 h-6" />
+          <div className="w-10 h-10 rounded bg-forest-subtle border border-forest/20 text-forest flex items-center justify-center">
+            <ShieldCheck className="w-5 h-5" />
           </div>
-          <h1 className="text-xl sm:text-2xl font-bold text-white tracking-tight">
+          <h1 className="font-serif text-2xl font-bold text-ink tracking-tight">
             Acceso a Recurso en Caché Zonal
           </h1>
-          <p className="text-xs text-slate-400 leading-relaxed">
+          <p className="text-xs text-ink-secondary leading-relaxed">
             Esta URL está protegida por una caché zonal de aplicación. Ingrese las credenciales autorizadas para este dominio y recurso.
           </p>
         </div>
@@ -334,11 +325,11 @@ export default function CacheLoginPage() {
             
             {/* Campo: Dominio */}
             <div className="space-y-1.5">
-              <label htmlFor="cache-domain" className="block text-xs font-semibold text-slate-200 uppercase tracking-wider">
+              <label htmlFor="cache-domain" className="block text-xs font-semibold text-ink uppercase tracking-wider">
                 Dominio
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-ink-muted">
                   <Globe className="w-4 h-4" />
                 </div>
                 <input
@@ -349,15 +340,15 @@ export default function CacheLoginPage() {
                   onChange={handleChange}
                   disabled={isSubmitting}
                   placeholder="ej. example.com o app.local"
-                  className={`w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-900/90 border text-slate-100 text-xs font-mono placeholder-slate-500 focus:outline-none transition-all ${
+                  className={`w-full pl-9 pr-3 py-2 rounded bg-white border text-ink text-xs font-mono placeholder-ink-muted focus:outline-none transition-colors ${
                     fieldErrors.domain
-                      ? 'border-rose-500 focus:ring-1 focus:ring-rose-500'
-                      : 'border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                      ? 'border-roseState focus:border-roseState focus:ring-1 focus:ring-roseState'
+                      : 'border-surface-border focus:border-forest focus:ring-1 focus:ring-forest'
                   }`}
                 />
               </div>
               {fieldErrors.domain && (
-                <p className="text-[11px] text-rose-400 flex items-center gap-1 mt-1">
+                <p className="text-[11px] text-roseState flex items-center gap-1 mt-1">
                   <AlertCircle className="w-3 h-3" />
                   <span>{fieldErrors.domain}</span>
                 </p>
@@ -366,11 +357,11 @@ export default function CacheLoginPage() {
 
             {/* Campo: urlId */}
             <div className="space-y-1.5">
-              <label htmlFor="cache-url-id" className="block text-xs font-semibold text-slate-200 uppercase tracking-wider">
+              <label htmlFor="cache-url-id" className="block text-xs font-semibold text-ink uppercase tracking-wider">
                 ID de URL (urlId)
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-ink-muted">
                   <Link2 className="w-4 h-4" />
                 </div>
                 <input
@@ -381,15 +372,15 @@ export default function CacheLoginPage() {
                   onChange={handleChange}
                   disabled={isSubmitting}
                   placeholder="ej. u1 o u2"
-                  className={`w-full pl-10 pr-3 py-2.5 rounded-xl bg-slate-900/90 border text-slate-100 text-xs font-mono placeholder-slate-500 focus:outline-none transition-all ${
+                  className={`w-full pl-9 pr-3 py-2 rounded bg-white border text-ink text-xs font-mono placeholder-ink-muted focus:outline-none transition-colors ${
                     fieldErrors.urlId
-                      ? 'border-rose-500 focus:ring-1 focus:ring-rose-500'
-                      : 'border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                      ? 'border-roseState focus:border-roseState focus:ring-1 focus:ring-roseState'
+                      : 'border-surface-border focus:border-forest focus:ring-1 focus:ring-forest'
                   }`}
                 />
               </div>
               {fieldErrors.urlId && (
-                <p className="text-[11px] text-rose-400 flex items-center gap-1 mt-1">
+                <p className="text-[11px] text-roseState flex items-center gap-1 mt-1">
                   <AlertCircle className="w-3 h-3" />
                   <span>{fieldErrors.urlId}</span>
                 </p>
@@ -400,11 +391,11 @@ export default function CacheLoginPage() {
 
           {/* Campo: Usuario */}
           <div className="space-y-1.5">
-            <label htmlFor="cache-username" className="block text-xs font-semibold text-slate-200 uppercase tracking-wider">
+            <label htmlFor="cache-username" className="block text-xs font-semibold text-ink uppercase tracking-wider">
               Nombre de Usuario
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-ink-muted">
                 <User className="w-4 h-4" />
               </div>
               <input
@@ -414,16 +405,17 @@ export default function CacheLoginPage() {
                 value={formData.username}
                 onChange={handleChange}
                 disabled={isSubmitting}
+                autoComplete="username"
                 placeholder="Nombre de usuario registrado en la URL"
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 border text-slate-100 text-sm placeholder-slate-500 focus:outline-none transition-all ${
+                className={`w-full pl-9 pr-3 py-2 rounded bg-white border text-ink text-sm placeholder-ink-muted focus:outline-none transition-colors ${
                   fieldErrors.username
-                    ? 'border-rose-500 focus:ring-1 focus:ring-rose-500'
-                    : 'border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                    ? 'border-roseState focus:border-roseState focus:ring-1 focus:ring-roseState'
+                    : 'border-surface-border focus:border-forest focus:ring-1 focus:ring-forest'
                 }`}
               />
             </div>
             {fieldErrors.username && (
-              <p className="text-[11px] text-rose-400 flex items-center gap-1 mt-1">
+              <p className="text-[11px] text-roseState flex items-center gap-1 mt-1">
                 <AlertCircle className="w-3 h-3" />
                 <span>{fieldErrors.username}</span>
               </p>
@@ -432,11 +424,11 @@ export default function CacheLoginPage() {
 
           {/* Campo: Contraseña */}
           <div className="space-y-1.5">
-            <label htmlFor="cache-password" className="block text-xs font-semibold text-slate-200 uppercase tracking-wider">
+            <label htmlFor="cache-password" className="block text-xs font-semibold text-ink uppercase tracking-wider">
               Contraseña
             </label>
             <div className="relative">
-              <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-ink-muted">
                 <Lock className="w-4 h-4" />
               </div>
               <input
@@ -446,16 +438,17 @@ export default function CacheLoginPage() {
                 value={formData.password}
                 onChange={handleChange}
                 disabled={isSubmitting}
+                autoComplete="new-password"
                 placeholder="••••••••"
-                className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 border text-slate-100 text-sm placeholder-slate-500 focus:outline-none transition-all ${
+                className={`w-full pl-9 pr-3 py-2 rounded bg-white border text-ink text-sm placeholder-ink-muted focus:outline-none transition-colors ${
                   fieldErrors.password
-                    ? 'border-rose-500 focus:ring-1 focus:ring-rose-500'
-                    : 'border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                    ? 'border-roseState focus:border-roseState focus:ring-1 focus:ring-roseState'
+                    : 'border-surface-border focus:border-forest focus:ring-1 focus:ring-forest'
                 }`}
               />
             </div>
             {fieldErrors.password && (
-              <p className="text-[11px] text-rose-400 flex items-center gap-1 mt-1">
+              <p className="text-[11px] text-roseState flex items-center gap-1 mt-1">
                 <AlertCircle className="w-3 h-3" />
                 <span>{fieldErrors.password}</span>
               </p>
@@ -464,7 +457,7 @@ export default function CacheLoginPage() {
 
           {/* Campo: Ruta de Destino / Redirección */}
           <div className="space-y-1.5">
-            <label htmlFor="cache-redirect" className="block text-xs font-semibold text-slate-200 uppercase tracking-wider">
+            <label htmlFor="cache-redirect" className="block text-xs font-semibold text-ink uppercase tracking-wider">
               Ruta de Destino (Redirect)
             </label>
             <input
@@ -475,9 +468,9 @@ export default function CacheLoginPage() {
               onChange={handleChange}
               disabled={isSubmitting}
               placeholder="/admin/panel"
-              className="w-full px-4 py-2 rounded-xl bg-slate-900/90 border border-slate-800 text-slate-100 text-xs font-mono placeholder-slate-500 focus:outline-none focus:border-indigo-500 transition-all"
+              className="w-full px-3 py-2 rounded bg-white border border-surface-border text-ink text-xs font-mono placeholder-ink-muted focus:outline-none focus:border-forest focus:ring-1 focus:ring-forest transition-colors"
             />
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] text-ink-muted">
               Ruta a la que se retornará en el dominio tras validar la sesión.
             </p>
           </div>
@@ -488,11 +481,11 @@ export default function CacheLoginPage() {
               type="submit"
               disabled={isSubmitting}
               id="cache-submit-button"
-              className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+              className="w-full py-2.5 px-4 rounded bg-forest hover:bg-forest-hover text-white shadow-subtle font-medium text-xs sm:text-sm transition-colors flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? (
                 <>
-                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   <span>Validando con la API...</span>
                 </>
               ) : (
@@ -506,24 +499,24 @@ export default function CacheLoginPage() {
 
         </form>
 
-        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between text-xs">
+        <div className="pt-3 border-t border-surface-border flex items-center justify-between text-xs">
           <Link
             to="/login"
-            className="text-slate-400 hover:text-indigo-300 transition-colors flex items-center gap-1"
+            className="text-ink-secondary hover:text-forest transition-colors flex items-center gap-1 font-medium"
           >
             <span>Portal de administración</span>
-            <ArrowRight className="w-3 h-3" />
+            <ArrowRight className="w-3.5 h-3.5" />
           </Link>
-          <span className="text-[11px] text-slate-500 font-mono">Cookie: zc_session</span>
+          <span className="text-[11px] text-ink-muted font-mono">Cookie: zc_session</span>
         </div>
 
       </div>
 
       {/* Nota de Seguridad */}
-      <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/60 text-[11px] text-slate-400 flex items-center gap-2.5">
-        <ShieldAlert className="w-4 h-4 text-indigo-400 shrink-0" />
+      <div className="p-3.5 rounded bg-surface border border-surface-border text-xs text-ink-secondary shadow-card flex items-center gap-2.5">
+        <ShieldAlert className="w-4 h-4 text-forest shrink-0" />
         <span>
-          Las credenciales se transmiten de forma cifrada mediante HTTPS hacia el endpoint <code className="text-slate-300 font-mono">POST /api/sessions</code>. Ninguna contraseña es guardada en el navegador.
+          Las credenciales se transmiten de forma cifrada mediante HTTPS hacia el endpoint <code className="text-ink font-mono font-medium">POST /api/sessions</code>. Ninguna contraseña es guardada en el navegador.
         </span>
       </div>
 

@@ -152,8 +152,8 @@ export function validateFileTypeEntry(extension, config) {
     return { valid: false, error: 'El TTL en segundos es obligatorio' };
   }
 
-  if (!Number.isInteger(ttl) || ttl < 0) {
-    return { valid: false, error: 'El TTL debe ser un número entero mayor o igual a 0 segundos' };
+  if (!Number.isInteger(ttl) || ttl <= 0) {
+    return { valid: false, error: 'El TTL debe ser un número entero mayor a 0 segundos' };
   }
 
   if (!config.policy || !ALLOWED_CACHE_POLICIES.includes(config.policy)) {
@@ -248,7 +248,7 @@ export function validateUrlForm(data, domainMaxBytes = null, currentAllocatedByt
  * @param {any} res
  * @returns {{ message: string, code: string|null }}
  */
-function parseUrlApiError(res) {
+export function parseUrlApiError(res) {
   if (!res) return { message: 'Error desconocido de comunicación', code: null };
 
   const data = res.data;
@@ -269,8 +269,8 @@ function parseUrlApiError(res) {
 
   if (res.status === 404) {
     return {
-      message: 'El endpoint de URLs (/api/domains/:domain/urls) no está disponible en el servidor (Tarea T-29 pendiente en el backend).',
-      code: 'ENDPOINT_NOT_FOUND',
+      message: 'La URL o recurso solicitado no fue encontrado en el servidor.',
+      code: 'NOT_FOUND',
     };
   }
 

@@ -164,7 +164,7 @@ export function getDnsTxtSpec(domainName, token) {
  * @param {any} res
  * @returns {{ message: string, code: string|null }}
  */
-function parseDomainApiError(res) {
+export function parseDomainApiError(res) {
   if (!res) return { message: 'Error desconocido de comunicación', code: null };
 
   const data = res.data;
@@ -185,8 +185,8 @@ function parseDomainApiError(res) {
 
   if (res.status === 404) {
     return {
-      message: 'El endpoint de dominios (/api/domains) no está disponible en el servidor (Tarea T-28 pendiente en el backend).',
-      code: 'ENDPOINT_NOT_FOUND',
+      message: 'El dominio o recurso solicitado no fue encontrado en el servidor.',
+      code: 'NOT_FOUND',
     };
   }
 

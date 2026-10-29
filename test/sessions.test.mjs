@@ -55,6 +55,12 @@ test('T-39: 2. Sanitización estricta de rutas de redirección (prevención de O
 
   // Intentos de bypass con protocolo relativo //malicious.com
   assert.equal(sanitizeRedirectPath('//malicious.com/attack'), '/');
+  assert.equal(sanitizeRedirectPath('/\\malicious.com/attack'), '/');
+  assert.equal(sanitizeRedirectPath('\\malicious.com\\attack'), '/');
+  assert.equal(sanitizeRedirectPath('javascript:alert(1)'), '/');
+  assert.equal(sanitizeRedirectPath('data:text/html,<script>alert(1)</script>'), '/');
+  assert.equal(sanitizeRedirectPath('vbscript:msgbox(1)'), '/');
+  assert.equal(sanitizeRedirectPath('file:///etc/passwd'), '/');
 
   // Valores vacíos o inválidos retornan '/'
   assert.equal(sanitizeRedirectPath(''), '/');

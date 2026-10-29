@@ -5,27 +5,16 @@ import {
   Plus, 
   Trash2, 
   ShieldCheck, 
-  ShieldAlert, 
-  ExternalLink, 
-  ArrowRight, 
   AlertCircle, 
   RefreshCw, 
   Layers, 
-  HardDrive, 
-  Server,
   CheckCircle2,
   AlertTriangle,
   X
 } from 'lucide-react';
-import StatusBadge from '../components/StatusBadge';
 import DomainVerificationCard from '../components/DomainVerificationCard';
-import { getDomains, deleteDomain, normalizeDomain } from '../services/domainService';
+import { getDomains, deleteDomain } from '../services/domainService';
 
-/**
- * Pantalla de Administración de Dominios (Tarea T-35).
- * Permite listar dominios, agregar nuevos, eliminarlos con confirmación
- * y verificar la propiedad mediante registro DNS TXT.
- */
 export default function DomainsListPage() {
   const [domains, setDomains] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -90,22 +79,16 @@ export default function DomainsListPage() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-8 animate-fadeIn">
+    <div className="max-w-5xl mx-auto space-y-8 animate-fadeIn">
       
-      {/* Encabezado y Metadatos de la Tarea T-35 */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-slate-800">
+      {/* Encabezado */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-surface-border">
         <div>
-          <div className="flex items-center gap-2 mb-1.5">
-            <StatusBadge label="Tarea T-35: Administración de Dominios" status="info" />
-            <span className="text-xs font-mono text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800">
-              Colección: domains/{'{domain}'}
-            </span>
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-            Dominios Registrados
+          <h1 className="font-serif text-2xl sm:text-3xl font-bold text-ink tracking-tight">
+            Mis dominios
           </h1>
-          <p className="text-xs sm:text-sm text-slate-400 mt-1">
-            Administre los dominios asociados a las cachés zonales, verifique su propiedad mediante DNS TXT y gestione sus URLs.
+          <p className="text-xs sm:text-sm text-ink-secondary mt-1">
+            Administre los dominios asociados a las cachés perimetrales y compruebe su propiedad vía DNS TXT.
           </p>
         </div>
 
@@ -113,7 +96,7 @@ export default function DomainsListPage() {
           <button
             onClick={fetchDomains}
             disabled={loading}
-            className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all cursor-pointer disabled:opacity-50"
+            className="p-2 rounded bg-surface hover:bg-surface-subtle text-ink-secondary hover:text-ink border border-surface-border transition-colors cursor-pointer disabled:opacity-50"
             title="Refrescar lista"
           >
             <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -121,7 +104,7 @@ export default function DomainsListPage() {
           
           <Link
             to="/dominios/nuevo"
-            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold shadow-lg shadow-indigo-600/25 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded bg-forest hover:bg-forest-hover text-white text-xs sm:text-sm font-medium shadow-subtle transition-colors cursor-pointer"
           >
             <Plus className="w-4 h-4" />
             <span>Agregar Dominio</span>
@@ -131,12 +114,12 @@ export default function DomainsListPage() {
 
       {/* Banner de éxito al realizar operaciones */}
       {actionSuccess && (
-        <div className="p-4 rounded-2xl bg-emerald-950/60 border border-emerald-800 text-emerald-200 text-xs sm:text-sm flex items-center justify-between gap-3 animate-fadeIn">
+        <div className="p-3.5 rounded bg-forest-subtle border border-forest/30 text-forest text-xs sm:text-sm flex items-center justify-between gap-3 animate-fadeIn">
           <div className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+            <CheckCircle2 className="w-4 h-4 shrink-0 text-forest" />
             <span>{actionSuccess}</span>
           </div>
-          <button onClick={() => setActionSuccess(null)} className="text-emerald-400 hover:text-white p-1">
+          <button onClick={() => setActionSuccess(null)} className="text-forest hover:opacity-75 p-1">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -144,36 +127,36 @@ export default function DomainsListPage() {
 
       {/* Banner de error de API si el backend no responde o falla */}
       {apiError && (
-        <div className="p-4 rounded-2xl bg-amber-950/40 border border-amber-800/80 text-amber-200 text-xs sm:text-sm space-y-1.5 flex items-start gap-3">
-          <AlertCircle className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-          <div className="space-y-1">
-            <span className="font-semibold text-white">Estado de conexión con el backend:</span>
-            <p className="text-amber-200/90 text-xs leading-relaxed">{apiError}</p>
+        <div className="p-3.5 rounded bg-amberState-subtle border border-amberState-border text-amberState text-xs space-y-1 flex items-start gap-2.5">
+          <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          <div>
+            <span className="font-medium block">Aviso del servidor:</span>
+            <p className="text-[11px] leading-relaxed">{apiError}</p>
           </div>
         </div>
       )}
 
-      {/* Modal / Sección de Verificación TXT si se seleccionó un dominio */}
+      {/* Sección de Verificación TXT si se seleccionó un dominio */}
       {verifyingDomain && (
-        <div className="p-6 rounded-3xl glass-panel border border-indigo-500/40 bg-indigo-950/10 space-y-4">
-          <div className="flex items-center justify-between pb-2 border-b border-indigo-900/50">
+        <div className="p-6 rounded-lg bg-surface border border-surface-border shadow-card space-y-4">
+          <div className="flex items-center justify-between pb-2 border-b border-surface-border">
             <div className="flex items-center gap-2">
-              <ShieldCheck className="w-5 h-5 text-indigo-400" />
-              <h2 className="text-base font-bold text-white">
-                Comprobación de Verificación DNS TXT para <span className="font-mono text-indigo-300">{verifyingDomain.name}</span>
+              <ShieldCheck className="w-4 h-4 text-forest" />
+              <h2 className="font-serif text-base font-bold text-ink">
+                Verificación DNS TXT: <span className="font-mono text-sm">{verifyingDomain.name}</span>
               </h2>
             </div>
             <button
               onClick={() => setVerifyingDomain(null)}
-              className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+              className="text-ink-muted hover:text-ink p-1 rounded hover:bg-surface-subtle transition-colors"
             >
-              <X className="w-5 h-5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
 
           <DomainVerificationCard
             domain={verifyingDomain.name}
-            verificationToken={verifyingDomain.verification?.token || 'TOKEN_PENDIENTE'}
+            txtRecord={verifyingDomain.txtRecord}
             initialStatus={verifyingDomain.verification?.status || 'pending'}
             verifiedAt={verifyingDomain.verification?.verifiedAt}
             onVerificationChange={({ status, verifiedAt }) => {
@@ -191,29 +174,29 @@ export default function DomainsListPage() {
 
       {/* Lista de Dominios */}
       {loading ? (
-        <div className="p-12 text-center glass-panel rounded-3xl border border-slate-800 space-y-3">
-          <div className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-slate-400">Consultando dominios registrados...</p>
+        <div className="p-12 text-center bg-surface rounded-lg border border-surface-border space-y-3">
+          <div className="w-6 h-6 border-2 border-forest/30 border-t-forest rounded-full animate-spin mx-auto" />
+          <p className="text-xs text-ink-muted">Cargando dominios...</p>
         </div>
       ) : domains.length === 0 ? (
         /* Estado vacío */
-        <div className="p-10 sm:p-14 text-center glass-panel rounded-3xl border border-slate-800 space-y-4">
-          <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto">
-            <Globe className="w-7 h-7" />
+        <div className="p-10 sm:p-14 text-center bg-surface rounded-lg border border-surface-border shadow-card space-y-4">
+          <div className="w-12 h-12 rounded bg-surface-subtle border border-surface-border text-forest flex items-center justify-center mx-auto">
+            <Globe className="w-6 h-6" />
           </div>
           <div className="max-w-md mx-auto space-y-1">
-            <h3 className="text-lg font-bold text-white">No hay dominios registrados</h3>
-            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-              Agregue su primer dominio para configurar su servidor de origen, tamaño de caché y validar la propiedad por DNS TXT.
+            <h3 className="font-serif text-lg font-bold text-ink">No hay dominios registrados</h3>
+            <p className="text-xs text-ink-secondary leading-relaxed">
+              Agregue su primer dominio para configurar su servidor de origen, tamaño de caché y comprobar la propiedad por DNS TXT.
             </p>
           </div>
           <div className="pt-2">
             <Link
               to="/dominios/nuevo"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/25 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded bg-forest hover:bg-forest-hover text-white text-xs sm:text-sm font-medium shadow-subtle transition-colors cursor-pointer"
             >
               <Plus className="w-4 h-4" />
-              <span>Registrar Primer Dominio</span>
+              <span>Registrar Dominio</span>
             </Link>
           </div>
         </div>
@@ -226,46 +209,43 @@ export default function DomainsListPage() {
             return (
               <div 
                 key={dom.name}
-                className="p-5 rounded-2xl glass-card border border-slate-800 hover:border-slate-700 flex flex-col justify-between gap-4 transition-all"
+                className="p-5 rounded-lg bg-surface border border-surface-border shadow-card hover:border-forest/40 flex flex-col justify-between gap-4 transition-all"
               >
                 <div className="space-y-3">
                   {/* Encabezado de la tarjeta */}
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2.5">
-                      <div className="w-9 h-9 rounded-xl bg-slate-900 border border-slate-800 flex items-center justify-center text-sky-400">
+                      <div className="w-8 h-8 rounded bg-surface-subtle border border-surface-border flex items-center justify-center text-forest">
                         <Globe className="w-4 h-4" />
                       </div>
                       <div>
-                        <h2 className="font-bold text-base text-white font-mono break-all">
+                        <h2 className="font-mono font-semibold text-sm text-ink break-all">
                           {dom.name}
                         </h2>
-                        <span className="text-[11px] text-slate-500 font-mono">
-                          ID: {dom.name}
-                        </span>
                       </div>
                     </div>
 
                     {/* Badge de estado de verificación */}
-                    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border shrink-0 ${
+                    <span className={`text-[11px] font-medium px-2 py-0.5 rounded border shrink-0 ${
                       isVerified
-                        ? 'bg-emerald-950/80 text-emerald-300 border-emerald-700/60'
-                        : 'bg-amber-950/80 text-amber-300 border-amber-700/60'
+                        ? 'bg-forest-subtle text-forest border-forest/30'
+                        : 'bg-amberState-subtle text-amberState border-amberState-border'
                     }`}>
                       {isVerified ? 'Verificado' : 'Pendiente TXT'}
                     </span>
                   </div>
 
-                  {/* Detalles técnicos del origen y caché */}
-                  <div className="grid grid-cols-2 gap-2 text-xs font-mono bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
+                  {/* Detalles de origen y caché */}
+                  <div className="grid grid-cols-2 gap-2 text-xs font-mono bg-surface-subtle p-3 rounded border border-surface-border">
                     <div className="space-y-0.5">
-                      <span className="text-slate-500 font-sans block text-[10px]">Origen configurado:</span>
-                      <span className="text-slate-200 truncate block">
+                      <span className="text-ink-muted font-sans block text-[11px]">Servidor origen:</span>
+                      <span className="text-ink truncate block">
                         {dom.origin ? `${dom.origin.scheme}://${dom.origin.host}:${dom.origin.port}` : 'No definido'}
                       </span>
                     </div>
                     <div className="space-y-0.5">
-                      <span className="text-slate-500 font-sans block text-[10px]">Caché Máxima:</span>
-                      <span className="text-indigo-300 font-semibold block">
+                      <span className="text-ink-muted font-sans block text-[11px]">Cuota de caché:</span>
+                      <span className="text-forest font-semibold block">
                         {formatBytes(dom.cacheSizeBytes)}
                       </span>
                     </div>
@@ -273,32 +253,28 @@ export default function DomainsListPage() {
                 </div>
 
                 {/* Acciones del dominio */}
-                <div className="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
+                <div className="pt-2 border-t border-surface-border flex flex-wrap items-center justify-between gap-2">
                   <div className="flex items-center gap-2">
-                    {/* Botón Administrar URLs */}
                     <Link
                       to={`/dominios/${encodeURIComponent(dom.name)}/urls`}
-                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600/20 hover:bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 text-xs font-semibold transition-all cursor-pointer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded bg-forest-subtle hover:bg-forest-subtle/80 text-forest border border-forest/30 text-xs font-medium transition-colors cursor-pointer"
                     >
                       <Layers className="w-3.5 h-3.5" />
-                      <span>Administrar URLs (T-36)</span>
+                      <span>Configurar URLs</span>
                     </Link>
 
-                    {/* Botón Verificación TXT */}
                     <button
                       onClick={() => setVerifyingDomain(dom)}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition-all cursor-pointer"
-                      title="Verificar registro DNS TXT"
+                      className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded bg-surface hover:bg-surface-subtle text-ink-secondary hover:text-ink text-xs font-medium border border-surface-border transition-colors cursor-pointer"
                     >
-                      <ShieldCheck className="w-3.5 h-3.5 text-sky-400" />
+                      <ShieldCheck className="w-3.5 h-3.5 text-forest" />
                       <span>{isVerified ? 'Detalles DNS' : 'Verificar TXT'}</span>
                     </button>
                   </div>
 
-                  {/* Botón Eliminar Dominio */}
                   <button
                     onClick={() => setDomainToDelete(dom)}
-                    className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 border border-transparent hover:border-rose-900/50 transition-colors cursor-pointer"
+                    className="p-1.5 rounded text-ink-muted hover:text-roseState hover:bg-roseState-subtle transition-colors cursor-pointer"
                     title="Eliminar dominio"
                   >
                     <Trash2 className="w-4 h-4" />
@@ -312,21 +288,21 @@ export default function DomainsListPage() {
 
       {/* Modal de Confirmación para Eliminar Dominio */}
       {domainToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-md p-6 rounded-3xl glass-panel border border-rose-900/60 bg-surface-dark space-y-4 shadow-2xl">
-            <div className="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center">
-              <AlertTriangle className="w-6 h-6" />
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 animate-fadeIn">
+          <div className="w-full max-w-md p-6 rounded-lg bg-surface border border-surface-border space-y-4 shadow-card">
+            <div className="w-10 h-10 rounded bg-roseState-subtle text-roseState border border-roseState-border flex items-center justify-center">
+              <AlertTriangle className="w-5 h-5" />
             </div>
 
-            <div className="space-y-1.5">
-              <h3 className="text-lg font-bold text-white">¿Eliminar este dominio?</h3>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Esta acción eliminará el dominio <strong className="text-white font-mono">{domainToDelete.name}</strong> y todas sus URLs y configuraciones de caché hijas. La caché zonal dejará de atender peticiones para este host.
+            <div className="space-y-1">
+              <h3 className="font-serif text-lg font-bold text-ink">¿Eliminar este dominio?</h3>
+              <p className="text-xs text-ink-secondary leading-relaxed">
+                Esta acción eliminará el dominio <strong className="text-ink font-mono">{domainToDelete.name}</strong> y todas sus reglas de URL hijas asociadas.
               </p>
             </div>
 
             {deleteError && (
-              <div className="p-3 rounded-xl bg-rose-950/80 border border-rose-800 text-xs text-rose-200">
+              <div className="p-3 rounded bg-roseState-subtle border border-roseState-border text-xs text-roseState">
                 {deleteError}
               </div>
             )}
@@ -336,7 +312,7 @@ export default function DomainsListPage() {
                 type="button"
                 onClick={() => setDomainToDelete(null)}
                 disabled={isDeleting}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all cursor-pointer"
+                className="px-3.5 py-2 rounded bg-surface hover:bg-surface-subtle text-ink-secondary hover:text-ink text-xs font-medium border border-surface-border transition-colors cursor-pointer"
               >
                 Cancelar
               </button>
@@ -344,10 +320,10 @@ export default function DomainsListPage() {
                 type="button"
                 onClick={handleConfirmDelete}
                 disabled={isDeleting}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-lg shadow-rose-600/30 transition-all cursor-pointer disabled:opacity-50"
+                className="inline-flex items-center gap-2 px-3.5 py-2 rounded bg-roseState hover:bg-roseState/90 text-white text-xs font-medium transition-colors cursor-pointer disabled:opacity-50"
               >
                 <Trash2 className="w-3.5 h-3.5" />
-                <span>{isDeleting ? 'Eliminando...' : 'Sí, eliminar dominio'}</span>
+                <span>{isDeleting ? 'Eliminando...' : 'Eliminar dominio'}</span>
               </button>
             </div>
           </div>

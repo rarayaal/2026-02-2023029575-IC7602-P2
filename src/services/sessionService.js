@@ -58,8 +58,13 @@ export function sanitizeRedirectPath(rawRedirect) {
     return '/';
   }
 
-  // Prevenir protocolo relativo '//malicious.com'
-  if (trimmed.startsWith('//')) {
+  // Prevenir protocolo relativo o esquemas peligrosos (Open Redirect)
+  if (
+    trimmed.startsWith('//') ||
+    trimmed.startsWith('/\\') ||
+    trimmed.startsWith('\\') ||
+    /^[a-zA-Z][a-zA-Z0-9+.-]*:/.test(trimmed)
+  ) {
     return '/';
   }
 
