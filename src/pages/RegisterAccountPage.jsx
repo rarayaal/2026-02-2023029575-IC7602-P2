@@ -7,20 +7,11 @@ import {
   User, 
   CheckCircle2, 
   AlertCircle, 
-  ArrowRight,
-  Shield,
-  Info,
-  Server,
-  LogIn
+  ArrowRight
 } from 'lucide-react';
-import StatusBadge from '../components/StatusBadge';
 import { validateRegistrationForm } from '../services/authService';
 import { useAuth } from '../hooks/useAuth';
 
-/**
- * Pantalla de registro de cuenta de usuario de la plataforma (T-34).
- * Administra la creación de usuarios para gestionar dominios y URLs según docs/modelo-datos.md.
- */
 export default function RegisterAccountPage() {
   const { register } = useAuth();
   const [formData, setFormData] = useState({
@@ -39,7 +30,6 @@ export default function RegisterAccountPage() {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
 
-    // Limpiar el error del campo al escribir
     if (fieldErrors[name]) {
       setFieldErrors((prev) => ({ ...prev, [name]: null }));
     }
@@ -49,7 +39,6 @@ export default function RegisterAccountPage() {
     e.preventDefault();
     setSubmitError(null);
 
-    // Validación sintáctica y de campos obligatorios en el cliente
     const validation = validateRegistrationForm(formData);
     if (!validation.valid) {
       setFieldErrors(validation.errors);
@@ -86,88 +75,71 @@ export default function RegisterAccountPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-8 animate-fadeIn">
+    <div className="max-w-xl mx-auto space-y-6 animate-fadeIn py-6">
       
-      {/* Encabezado y Metadatos de la Tarea */}
-      <div className="flex flex-wrap items-center justify-between gap-3 pb-2 border-b border-slate-800">
-        <div className="flex items-center gap-2">
-          <StatusBadge label="Tarea T-34: Registro de Cuenta" status="info" />
-          <span className="text-xs font-mono text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800">
-            Colección Firestore: users/{'{uid}'}
-          </span>
-        </div>
-        <Link
-          to="/dominios/nuevo"
-          className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-medium transition-colors"
-        >
-          <span>Ir a Registro de Dominios</span>
-          <ArrowRight className="w-3.5 h-3.5" />
-        </Link>
-      </div>
-
       {/* Tarjeta de Cuenta Creada Exitosamente */}
       {createdAccount ? (
-        <div className="p-8 rounded-3xl glass-panel border border-emerald-500/40 bg-emerald-950/10 space-y-6 text-center sm:text-left">
+        <div className="p-8 rounded-lg bg-surface border border-surface-border shadow-card space-y-6 text-center sm:text-left">
           <div className="flex flex-col sm:flex-row items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 flex items-center justify-center shrink-0">
-              <CheckCircle2 className="w-8 h-8" />
+            <div className="w-12 h-12 rounded bg-forest-subtle text-forest border border-forest/30 flex items-center justify-center shrink-0">
+              <CheckCircle2 className="w-6 h-6" />
             </div>
             <div>
-              <h2 className="text-2xl font-bold text-white">¡Cuenta creada exitosamente!</h2>
-              <p className="text-sm text-slate-300 mt-1">
-                La persona usuaria ha sido registrada en el sistema conforme al modelo de datos de la plataforma.
+              <h2 className="font-serif text-2xl font-bold text-ink">Cuenta Creada</h2>
+              <p className="text-xs text-ink-secondary mt-1">
+                La persona usuaria ha sido registrada exitosamente en la plataforma.
               </p>
             </div>
           </div>
 
-          <div className="p-4 rounded-2xl bg-slate-950/80 border border-slate-800 space-y-2 text-xs font-mono">
-            <div className="flex flex-col sm:flex-row sm:justify-between py-1 border-b border-slate-800/80">
-              <span className="text-slate-400 font-sans">Nombre para mostrar (displayName):</span>
-              <span className="text-white font-semibold">{createdAccount.displayName}</span>
+          <div className="p-4 rounded bg-surface-subtle border border-surface-border space-y-2 text-xs font-mono">
+            <div className="flex flex-col sm:flex-row sm:justify-between py-1 border-b border-surface-border">
+              <span className="text-ink-muted font-sans">Nombre:</span>
+              <span className="text-ink font-semibold">{createdAccount.displayName}</span>
             </div>
-            <div className="flex flex-col sm:flex-row sm:justify-between py-1 border-b border-slate-800/80">
-              <span className="text-slate-400 font-sans">Correo electrónico (email):</span>
-              <span className="text-indigo-300 font-semibold">{createdAccount.email}</span>
+            <div className="flex flex-col sm:flex-row sm:justify-between py-1 border-b border-surface-border">
+              <span className="text-ink-muted font-sans">Correo electrónico:</span>
+              <span className="text-ink font-semibold">{createdAccount.email}</span>
             </div>
-            <div className="flex flex-col sm:flex-row sm:justify-between py-1 border-b border-slate-800/80">
-              <span className="text-slate-400 font-sans">Identificador de cuenta (uid):</span>
-              <span className="text-sky-300 font-semibold">{createdAccount.uid}</span>
+            <div className="flex flex-col sm:flex-row sm:justify-between py-1 border-b border-surface-border">
+              <span className="text-ink-muted font-sans">Identificador (UID):</span>
+              <span className="text-forest font-semibold">{createdAccount.uid}</span>
             </div>
             <div className="flex flex-col sm:flex-row sm:justify-between py-1">
-              <span className="text-slate-400 font-sans">Estado de sesión Firebase:</span>
-              <span className={createdAccount.hasSession ? "text-emerald-400 font-semibold" : "text-amber-300"}>
-                {createdAccount.hasSession ? "Autenticado con ID Token" : (createdAccount.note || "Requiere inicio de sesión")}
+              <span className="text-ink-muted font-sans">Estado de sesión:</span>
+              <span className={createdAccount.hasSession ? "text-forest font-semibold" : "text-amberState"}>
+                {createdAccount.hasSession ? "Autenticado con sesión activa" : (createdAccount.note || "Requiere inicio de sesión")}
               </span>
             </div>
           </div>
 
           {createdAccount.autoLoginError && (
-            <div className="p-3 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs flex items-center gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
-              <span>Cuenta creada. El inicio automático no se completó: {createdAccount.autoLoginError}. Puede iniciar sesión manualmente.</span>
+            <div className="p-3 rounded bg-amberState-subtle border border-amberState-border text-amberState text-xs flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-amberState" />
+              <span>Cuenta creada. El inicio automático no se completó: {createdAccount.autoLoginError}.</span>
             </div>
           )}
 
           <div className="pt-2 flex flex-wrap gap-3 justify-center sm:justify-start">
             <Link
               to="/dominios/nuevo"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/25 transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded bg-forest hover:bg-forest-hover text-white text-xs sm:text-sm font-medium shadow-subtle transition-colors cursor-pointer"
             >
-              <span>Continuar al Registro de Dominio</span>
+              <span>Registrar un dominio</span>
               <ArrowRight className="w-4 h-4" />
             </Link>
             <Link
               to="/dominios"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-sm font-semibold transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded bg-surface hover:bg-surface-subtle text-ink text-xs sm:text-sm font-medium border border-surface-border transition-colors cursor-pointer"
             >
-              <span>Ver Mis Dominios</span>
+              <span>Ver dominios</span>
             </Link>
             <button
               onClick={() => {
                 setCreatedAccount(null);
                 setFormData({ displayName: '', email: '', password: '', confirmPassword: '' });
               }}
-              className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:bg-slate-800 text-slate-400 hover:text-slate-200 text-sm font-medium transition-all cursor-pointer"
+              className="px-4 py-2.5 rounded bg-surface hover:bg-surface-subtle text-ink-secondary hover:text-ink text-xs sm:text-sm font-medium border border-surface-border transition-colors cursor-pointer"
             >
               Registrar otra cuenta
             </button>
@@ -175,48 +147,40 @@ export default function RegisterAccountPage() {
         </div>
       ) : (
         /* Formulario de Registro de Cuenta */
-        <div className="p-6 sm:p-8 rounded-3xl glass-panel border border-slate-800 space-y-6">
+        <div className="p-6 sm:p-8 rounded-lg bg-surface border border-surface-border shadow-card space-y-6">
           
-          <div className="space-y-2">
-            <div className="w-12 h-12 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center">
-              <UserPlus className="w-6 h-6" />
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Crear Cuenta de Usuario
+          <div className="space-y-1.5 text-center sm:text-left">
+            <h1 className="font-serif text-2xl font-bold text-ink">
+              Crear Cuenta
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
-              Las personas usuarias de la plataforma tienen permisos para registrar y administrar dominios, definir sus políticas de caché y gestionar credenciales de acceso.
+            <p className="text-xs text-ink-secondary leading-relaxed">
+              Cree una cuenta para registrar dominios y configurar políticas de aceleración y caché.
             </p>
           </div>
 
           {/* Banner de error al enviar */}
           {submitError && (
-            <div className="p-4 rounded-2xl bg-rose-950/60 border border-rose-800/80 text-rose-200 text-xs sm:text-sm space-y-1.5 flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-rose-400 shrink-0 mt-0.5" />
+            <div className="p-3.5 rounded bg-roseState-subtle border border-roseState-border text-roseState text-xs space-y-1 flex items-start gap-2.5">
+              <AlertCircle className="w-4 h-4 text-roseState shrink-0 mt-0.5" />
               <div>
-                <div className="font-semibold text-white">No fue posible registrar la cuenta</div>
-                <p className="text-rose-200/90 text-xs leading-relaxed">{submitError.message}</p>
-                {submitError.code && (
-                  <span className="inline-block mt-1 font-mono text-[11px] bg-rose-900/60 px-2 py-0.5 rounded text-rose-300 border border-rose-800/60">
-                    Código: {submitError.code}
-                  </span>
-                )}
+                <span className="font-medium block">No fue posible registrar la cuenta</span>
+                <p className="text-[11px] leading-relaxed">{submitError.message}</p>
               </div>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5" noValidate>
+          <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             
             {/* Campo: Nombre para mostrar */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label 
                 htmlFor="displayName" 
-                className="block text-xs font-semibold text-slate-200 uppercase tracking-wider"
+                className="block text-xs font-medium text-ink"
               >
-                Nombre Completo o Nombre para Mostrar <span className="text-rose-400">*</span>
+                Nombre Completo <span className="text-roseState">*</span>
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-ink-muted">
                   <User className="w-4 h-4" />
                 </div>
                 <input
@@ -226,32 +190,32 @@ export default function RegisterAccountPage() {
                   value={formData.displayName}
                   onChange={handleChange}
                   disabled={isSubmitting}
-                  placeholder="Ej. Alexandra De Gracia"
-                  className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 border text-slate-100 text-sm placeholder-slate-500 focus:outline-none transition-all ${
+                  placeholder="Ej. Ana Morales"
+                  className={`w-full pl-9 pr-3 py-2 rounded bg-white border text-ink text-sm placeholder-ink-muted focus:outline-none transition-colors ${
                     fieldErrors.displayName 
-                      ? 'border-rose-500 focus:ring-1 focus:ring-rose-500' 
-                      : 'border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                      ? 'border-roseState focus:border-roseState focus:ring-1 focus:ring-roseState' 
+                      : 'border-surface-border focus:border-forest focus:ring-1 focus:ring-forest'
                   }`}
                 />
               </div>
               {fieldErrors.displayName && (
-                <p className="text-xs text-rose-400 flex items-center gap-1 mt-1">
-                  <AlertCircle className="w-3.5 h-3.5" />
+                <p className="text-xs text-roseState flex items-center gap-1 mt-1">
+                  <AlertCircle className="w-3 h-3" />
                   <span>{fieldErrors.displayName}</span>
                 </p>
               )}
             </div>
 
             {/* Campo: Correo electrónico */}
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <label 
                 htmlFor="email" 
-                className="block text-xs font-semibold text-slate-200 uppercase tracking-wider"
+                className="block text-xs font-medium text-ink"
               >
-                Correo Electrónico <span className="text-rose-400">*</span>
+                Correo Electrónico <span className="text-roseState">*</span>
               </label>
               <div className="relative">
-                <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-ink-muted">
                   <Mail className="w-4 h-4" />
                 </div>
                 <input
@@ -262,34 +226,34 @@ export default function RegisterAccountPage() {
                   onChange={handleChange}
                   disabled={isSubmitting}
                   placeholder="usuario@ejemplo.com"
-                  className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 border text-slate-100 text-sm placeholder-slate-500 focus:outline-none transition-all ${
+                  className={`w-full pl-9 pr-3 py-2 rounded bg-white border text-ink text-sm placeholder-ink-muted focus:outline-none transition-colors ${
                     fieldErrors.email 
-                      ? 'border-rose-500 focus:ring-1 focus:ring-rose-500' 
-                      : 'border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                      ? 'border-roseState focus:border-roseState focus:ring-1 focus:ring-roseState' 
+                      : 'border-surface-border focus:border-forest focus:ring-1 focus:ring-forest'
                   }`}
                 />
               </div>
               {fieldErrors.email && (
-                <p className="text-xs text-rose-400 flex items-center gap-1 mt-1">
-                  <AlertCircle className="w-3.5 h-3.5" />
+                <p className="text-xs text-roseState flex items-center gap-1 mt-1">
+                  <AlertCircle className="w-3 h-3" />
                   <span>{fieldErrors.email}</span>
                 </p>
               )}
             </div>
 
-            {/* Campos de Contraseña (en 2 columnas en desktop) */}
+            {/* Campos de Contraseña */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               
               {/* Contraseña */}
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <label 
                   htmlFor="password" 
-                  className="block text-xs font-semibold text-slate-200 uppercase tracking-wider"
+                  className="block text-xs font-medium text-ink"
                 >
-                  Contraseña <span className="text-rose-400">*</span>
+                  Contraseña <span className="text-roseState">*</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-ink-muted">
                     <Lock className="w-4 h-4" />
                   </div>
                   <input
@@ -300,31 +264,31 @@ export default function RegisterAccountPage() {
                     onChange={handleChange}
                     disabled={isSubmitting}
                     placeholder="Mínimo 6 caracteres"
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 border text-slate-100 text-sm placeholder-slate-500 focus:outline-none transition-all ${
+                    className={`w-full pl-9 pr-3 py-2 rounded bg-white border text-ink text-sm placeholder-ink-muted focus:outline-none transition-colors ${
                       fieldErrors.password 
-                        ? 'border-rose-500 focus:ring-1 focus:ring-rose-500' 
-                        : 'border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                        ? 'border-roseState focus:border-roseState focus:ring-1 focus:ring-roseState' 
+                        : 'border-surface-border focus:border-forest focus:ring-1 focus:ring-forest'
                     }`}
                   />
                 </div>
                 {fieldErrors.password && (
-                  <p className="text-xs text-rose-400 flex items-center gap-1 mt-1">
-                    <AlertCircle className="w-3.5 h-3.5" />
+                  <p className="text-xs text-roseState flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3 h-3" />
                     <span>{fieldErrors.password}</span>
                   </p>
                 )}
               </div>
 
               {/* Confirmar Contraseña */}
-              <div className="space-y-1.5">
+              <div className="space-y-1">
                 <label 
                   htmlFor="confirmPassword" 
-                  className="block text-xs font-semibold text-slate-200 uppercase tracking-wider"
+                  className="block text-xs font-medium text-ink"
                 >
-                  Confirmar Contraseña <span className="text-rose-400">*</span>
+                  Confirmar <span className="text-roseState">*</span>
                 </label>
                 <div className="relative">
-                  <div className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-slate-500">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-ink-muted">
                     <Lock className="w-4 h-4" />
                   </div>
                   <input
@@ -334,17 +298,17 @@ export default function RegisterAccountPage() {
                     value={formData.confirmPassword}
                     onChange={handleChange}
                     disabled={isSubmitting}
-                    placeholder="Repita su contraseña"
-                    className={`w-full pl-10 pr-4 py-2.5 rounded-xl bg-slate-900/90 border text-slate-100 text-sm placeholder-slate-500 focus:outline-none transition-all ${
+                    placeholder="Repita contraseña"
+                    className={`w-full pl-9 pr-3 py-2 rounded bg-white border text-ink text-sm placeholder-ink-muted focus:outline-none transition-colors ${
                       fieldErrors.confirmPassword 
-                        ? 'border-rose-500 focus:ring-1 focus:ring-rose-500' 
-                        : 'border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                        ? 'border-roseState focus:border-roseState focus:ring-1 focus:ring-roseState' 
+                        : 'border-surface-border focus:border-forest focus:ring-1 focus:ring-forest'
                     }`}
                   />
                 </div>
                 {fieldErrors.confirmPassword && (
-                  <p className="text-xs text-rose-400 flex items-center gap-1 mt-1">
-                    <AlertCircle className="w-3.5 h-3.5" />
+                  <p className="text-xs text-roseState flex items-center gap-1 mt-1">
+                    <AlertCircle className="w-3 h-3" />
                     <span>{fieldErrors.confirmPassword}</span>
                   </p>
                 )}
@@ -358,27 +322,27 @@ export default function RegisterAccountPage() {
                 type="submit"
                 disabled={isSubmitting}
                 id="register-account-submit"
-                className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-sm shadow-lg shadow-indigo-600/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                className="w-full py-2.5 px-4 rounded bg-forest hover:bg-forest-hover text-white font-medium text-xs sm:text-sm shadow-subtle transition-colors flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
-                    <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    <span>Enviando solicitud de registro...</span>
+                    <div className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                    <span>Registrando cuenta...</span>
                   </>
                 ) : (
                   <>
                     <UserPlus className="w-4 h-4" />
-                    <span>Crear Cuenta de Usuario</span>
+                    <span>Crear cuenta</span>
                   </>
                 )}
               </button>
             </div>
 
-            <div className="pt-3 border-t border-slate-800/80 text-center">
-              <p className="text-xs text-slate-400">
-                ¿Ya dispone de una cuenta en la plataforma?{' '}
-                <Link to="/login" className="text-indigo-400 hover:text-indigo-300 font-semibold transition-colors">
-                  Iniciar Sesión
+            <div className="pt-3 border-t border-surface-border text-center">
+              <p className="text-xs text-ink-muted">
+                ¿Ya dispone de una cuenta?{' '}
+                <Link to="/login" className="text-forest hover:underline font-medium">
+                  Iniciar sesión
                 </Link>
               </p>
             </div>
@@ -387,17 +351,6 @@ export default function RegisterAccountPage() {
 
         </div>
       )}
-
-      {/* Nota de Arquitectura del Modelo de Datos */}
-      <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800/80 text-xs text-slate-400 flex items-start gap-3">
-        <Info className="w-4 h-4 text-sky-400 shrink-0 mt-0.5" />
-        <div className="space-y-1">
-          <strong className="text-slate-300">Separación de roles de usuario (docs/modelo-datos.md):</strong>
-          <p className="text-[11px] leading-relaxed">
-            Las personas usuarias creadas aquí corresponden a administradores de la plataforma (<code className="text-indigo-300">users/{'{uid}'}</code>). Los usuarios de URLs protegidas para el proxy de caché se configuran por separado en cada ruta y nunca se mezclan.
-          </p>
-        </div>
-      </div>
 
     </div>
   );

@@ -1,21 +1,19 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { 
-  CheckCircle2, 
-  Layers, 
-  Terminal, 
   Globe, 
-  Server, 
+  Layers, 
+  Shield, 
+  Plus, 
   ArrowRight, 
   AlertCircle,
-  Code2,
-  UserPlus,
-  LogIn
+  Activity,
+  CheckCircle2,
+  Lock,
+  Server
 } from 'lucide-react';
 import { config } from '../utils/config';
-import { PROJECT_METADATA } from '../utils/constants';
 import apiClient from '../services/apiClient';
-import StatusBadge from '../components/StatusBadge';
 
 export default function HomePage() {
   const [testResult, setTestResult] = useState(null);
@@ -26,7 +24,6 @@ export default function HomePage() {
     setTestResult(null);
 
     try {
-      // Prueba genérica del cliente HTTP centralizado (sin endpoints de negocio quemados)
       const res = await apiClient.get('/health');
       setTestResult(res);
     } catch (err) {
@@ -43,215 +40,217 @@ export default function HomePage() {
   };
 
   return (
-    <div className="space-y-8 animate-fadeIn">
+    <div className="space-y-6 animate-fadeIn">
       
-      {/* Hero Section */}
-      <div className="relative overflow-hidden rounded-3xl glass-panel p-8 sm:p-10 border border-slate-800">
-        <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 rounded-full bg-indigo-500/10 blur-3xl pointer-events-none" />
-        <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-80 h-80 rounded-full bg-sky-500/10 blur-3xl pointer-events-none" />
-
-        <div className="relative max-w-3xl space-y-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <StatusBadge label="Tarea T33: Estructura Base de la UI" status="success" />
-            <span className="text-xs font-mono text-slate-400 bg-slate-900/80 px-2.5 py-0.5 rounded-full border border-slate-800">
-              Vite 5 + React 18 + Tailwind 3
-            </span>
-          </div>
-
-          <h1 className="text-3xl sm:text-4xl lg:text-5xl font-extrabold text-white tracking-tight leading-tight">
-            Estructura Base de la UI <br />
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-sky-400 to-indigo-300">
-              Zonal Cache & Proxy
-            </span>
-          </h1>
-
-          <p className="text-sm sm:text-base text-slate-300 leading-relaxed max-w-2xl">
-            Base frontend configurada con enrutamiento declarativo, cliente HTTP centralizado desacoplado, 
-            diseño responsivo y automatización de despliegue para Vercel y Docker Compose.
-          </p>
-
-          <div className="pt-2 flex flex-wrap items-center gap-3">
-            <Link
-              to="/dominios"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/25 transition-all cursor-pointer"
-            >
-              <Globe className="w-4 h-4 text-emerald-300" />
-              <span>Administrar Dominios (T-35)</span>
-            </Link>
-
-            <Link
-              to="/registro"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/90 hover:bg-slate-700 text-indigo-300 text-sm font-semibold border border-indigo-500/30 transition-all cursor-pointer"
-            >
-              <UserPlus className="w-4 h-4" />
-              <span>Crear Cuenta (T-34)</span>
-            </Link>
-
-            <Link
-              to="/login"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-sm font-medium border border-slate-700 transition-all cursor-pointer"
-            >
-              <LogIn className="w-4 h-4 text-indigo-400" />
-              <span>Iniciar Sesión</span>
-            </Link>
-
-            <button
-              onClick={handleTestClient}
-              disabled={testingClient}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-sm font-medium border border-slate-700 transition-all cursor-pointer disabled:opacity-50"
-            >
-              <Server className="w-4 h-4 text-sky-400" />
-              <span>{testingClient ? 'Comprobando cliente...' : 'Probar /api/health'}</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* Resultado de la prueba del cliente HTTP genérico */}
-      {testResult && (
-        <div className={`p-4 rounded-2xl border text-xs leading-relaxed glass-panel ${
-          testResult.ok ? 'border-emerald-800 text-emerald-200' : 'border-amber-800/80 text-amber-200'
-        }`}>
-          <div className="font-semibold text-sm mb-1 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-amber-400" />
-            <span>Resultado de la prueba del cliente HTTP centralizado:</span>
-          </div>
-          <p className="text-slate-300">
-            {testResult.ok
-              ? 'Petición exitosa al backend.'
-              : testResult.isConfigError
-              ? 'Error controlado: No se pudo realizar la petición porque la variable VITE_API_BASE_URL no está configurada.'
-              : `Petición dirigida a "${config.apiBaseUrl}/health". Estado de conexión capturado correctamente sin endpoints quemados:`}
-          </p>
-          <pre className="mt-2 p-2.5 rounded-lg bg-black/50 font-mono text-slate-300 overflow-x-auto text-[11px]">
-            {testResult.error || JSON.stringify(testResult, null, 2)}
-          </pre>
-        </div>
-      )}
-
-      {/* Grid de 4 Bloques de Verificación Técnica de T33 */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        
-        <div className="glass-card p-5 rounded-2xl border border-slate-800/80 space-y-2">
-          <div className="w-9 h-9 rounded-xl bg-indigo-500/10 border border-indigo-500/20 flex items-center justify-center text-indigo-400">
-            <Code2 className="w-5 h-5" />
-          </div>
-          <h3 className="font-bold text-white text-sm">React 18 & Vite 5</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Compilación ultrarrápida, Fast Refresh en desarrollo y bundle optimizado para producción.
-          </p>
-          <div className="pt-2 text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Configuración validada</span>
-          </div>
-        </div>
-
-        <div className="glass-card p-5 rounded-2xl border border-slate-800/80 space-y-2">
-          <div className="w-9 h-9 rounded-xl bg-sky-500/10 border border-sky-500/20 flex items-center justify-center text-sky-400">
-            <Layers className="w-5 h-5" />
-          </div>
-          <h3 className="font-bold text-white text-sm">Tailwind CSS 3</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Tokens de diseño curados, tipografía moderna, modo oscuro por defecto y layout responsivo.
-          </p>
-          <div className="pt-2 text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Estilos compilados</span>
-          </div>
-        </div>
-
-        <div className="glass-card p-5 rounded-2xl border border-slate-800/80 space-y-2">
-          <div className="w-9 h-9 rounded-xl bg-purple-500/10 border border-purple-500/20 flex items-center justify-center text-purple-400">
-            <Globe className="w-5 h-5" />
-          </div>
-          <h3 className="font-bold text-white text-sm">React Router DOM 6</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            Navegación SPA declarativa con layout base compartido (Navbar, Outlet, Footer) y vista 404.
-          </p>
-          <div className="pt-2 text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Enrutamiento activo</span>
-          </div>
-        </div>
-
-        <div className="glass-card p-5 rounded-2xl border border-slate-800/80 space-y-2">
-          <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/20 flex items-center justify-center text-emerald-400">
-            <Server className="w-5 h-5" />
-          </div>
-          <h3 className="font-bold text-white text-sm">Vercel & Docker</h3>
-          <p className="text-xs text-slate-400 leading-relaxed">
-            vercel.json con SPA rewrites, Dockerfile multi-stage con Nginx y docker-compose.yml en 1 comando.
-          </p>
-          <div className="pt-2 text-[11px] text-emerald-400 flex items-center gap-1 font-medium">
-            <CheckCircle2 className="w-3.5 h-3.5" />
-            <span>Automatización lista</span>
-          </div>
-        </div>
-
-      </div>
-
-      {/* Panel de Configuración de Variables de Entorno (Sin Valores Quemados) */}
-      <div className="glass-panel p-6 sm:p-7 rounded-2xl border border-slate-800 space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+      {/* Encabezado Principal del Panel */}
+      <div className="bg-surface border border-surface-border rounded-lg p-6 sm:p-7 shadow-card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h2 className="text-base font-bold text-white flex items-center gap-2">
-              <Terminal className="w-4 h-4 text-indigo-400" />
-              <span>Variables de Entorno Cargadas (VITE_*)</span>
-            </h2>
-            <p className="text-xs text-slate-400 mt-0.5">
-              Valores obtenidos dinámicamente mediante <code>src/utils/config.js</code> desde el archivo <code>.env</code>
+            <h1 className="font-serif text-2xl sm:text-3xl font-bold text-ink tracking-tight">
+              Panel de Control
+            </h1>
+            <p className="text-xs sm:text-sm text-ink-secondary mt-1">
+              Administración de dominios, reglas de enrutamiento y control de acceso.
             </p>
           </div>
-          <span className="text-[11px] font-mono text-emerald-400 bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-800">
-            Cero valores quemados
-          </span>
+
+          <div className="flex flex-wrap items-center gap-2.5">
+            <Link
+              to="/dominios/nuevo"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded bg-forest hover:bg-forest-hover text-white text-xs sm:text-sm font-medium transition-colors shadow-subtle cursor-pointer"
+            >
+              <Plus className="w-4 h-4" />
+              <span>Agregar Dominio</span>
+            </Link>
+
+            <Link
+              to="/dominios"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded bg-surface hover:bg-surface-subtle text-ink text-xs sm:text-sm font-medium border border-surface-border transition-colors cursor-pointer"
+            >
+              <Globe className="w-4 h-4 text-forest" />
+              <span>Mis Dominios</span>
+            </Link>
+          </div>
+        </div>
+      </div>
+
+      {/* Módulos Operativos Principales */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        
+        {/* Módulo 1: Dominios */}
+        <div className="bg-surface p-5 rounded-lg border border-surface-border space-y-3 shadow-card flex flex-col justify-between">
+          <div className="space-y-2">
+            <div className="w-9 h-9 rounded bg-surface-subtle border border-surface-border flex items-center justify-center text-forest">
+              <Globe className="w-4 h-4" />
+            </div>
+            <h2 className="font-serif font-bold text-ink text-base">Dominios y Orígenes</h2>
+            <p className="text-xs text-ink-secondary leading-relaxed">
+              Configuración de servidores de origen, puertos, cuota de almacenamiento y validación de propiedad por DNS TXT.
+            </p>
+          </div>
+
+          <div className="pt-2 border-t border-surface-border flex items-center justify-between">
+            <Link 
+              to="/dominios" 
+              className="text-xs font-semibold text-forest hover:underline flex items-center gap-1"
+            >
+              <span>Ver dominios</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+            <Link 
+              to="/dominios/nuevo" 
+              className="text-xs text-ink-muted hover:text-ink font-medium"
+            >
+              + Nuevo
+            </Link>
+          </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
-          <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
-            <span className="text-slate-400 block font-sans font-semibold">VITE_APP_TITLE:</span>
-            <span className="text-indigo-300 font-bold">{config.appTitle}</span>
+        {/* Módulo 2: URLs y Caché */}
+        <div className="bg-surface p-5 rounded-lg border border-surface-border space-y-3 shadow-card flex flex-col justify-between">
+          <div className="space-y-2">
+            <div className="w-9 h-9 rounded bg-surface-subtle border border-surface-border flex items-center justify-center text-forest">
+              <Layers className="w-4 h-4" />
+            </div>
+            <h2 className="font-serif font-bold text-ink text-base">Reglas de Ruta y Caché</h2>
+            <p className="text-xs text-ink-secondary leading-relaxed">
+              Patrones con comodines (*), jerarquía por especificidad, TTL por tipo de archivo y políticas de reemplazo.
+            </p>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
-            <span className="text-slate-400 block font-sans font-semibold">VITE_APP_ENV:</span>
-            <span className="text-emerald-300 font-bold">{config.appEnv}</span>
+          <div className="pt-2 border-t border-surface-border">
+            <Link 
+              to="/dominios" 
+              className="text-xs font-semibold text-forest hover:underline flex items-center gap-1"
+            >
+              <span>Configurar en mis dominios</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+        </div>
+
+        {/* Módulo 3: Acceso y Seguridad */}
+        <div className="bg-surface p-5 rounded-lg border border-surface-border space-y-3 shadow-card flex flex-col justify-between">
+          <div className="space-y-2">
+            <div className="w-9 h-9 rounded bg-surface-subtle border border-surface-border flex items-center justify-center text-forest">
+              <Shield className="w-4 h-4" />
+            </div>
+            <h2 className="font-serif font-bold text-ink text-base">Control de Acceso</h2>
+            <p className="text-xs text-ink-secondary leading-relaxed">
+              Protección de rutas mediante API Keys (x-api-key) o autenticación por usuario y contraseña.
+            </p>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
-            <span className="text-slate-400 block font-sans font-semibold">VITE_API_BASE_URL:</span>
-            {config.isApiConfigured ? (
-              <span className="text-sky-300 font-bold break-all">{config.apiBaseUrl}</span>
+          <div className="pt-2 border-t border-surface-border flex items-center justify-between">
+            <Link 
+              to="/cache-login" 
+              className="text-xs font-semibold text-forest hover:underline flex items-center gap-1"
+            >
+              <span>Acceso a caché</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+            <Link 
+              to="/login" 
+              className="text-xs text-ink-muted hover:text-ink font-medium"
+            >
+              Sesión de admin
+            </Link>
+          </div>
+        </div>
+
+      </div>
+
+      {/* Estado del Sistema Operativo */}
+      <div className="bg-surface p-6 rounded-lg border border-surface-border space-y-4 shadow-card">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-surface-border">
+          <div>
+            <h2 className="font-serif text-base font-bold text-ink flex items-center gap-2">
+              <Activity className="w-4 h-4 text-forest" />
+              <span>Estado del Servicio</span>
+            </h2>
+            <p className="text-xs text-ink-secondary mt-0.5">
+              Conexión con los servicios de backend y autenticación
+            </p>
+          </div>
+
+          <button
+            onClick={handleTestClient}
+            disabled={testingClient}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded bg-surface hover:bg-surface-subtle text-ink font-medium text-xs border border-surface-border transition-colors cursor-pointer disabled:opacity-50 self-start sm:self-auto"
+          >
+            <Server className="w-3.5 h-3.5 text-forest" />
+            <span>{testingClient ? 'Comprobando...' : 'Probar conexión (/api/health)'}</span>
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs">
+          <div className="p-3 rounded bg-surface-subtle border border-surface-border space-y-1">
+            <span className="text-ink-muted block font-medium">Servidor API:</span>
+            {testResult?.ok ? (
+              <span className="text-forest font-mono font-medium truncate block flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5 text-forest inline shrink-0" />
+                <span>En línea ({config.apiBaseUrl})</span>
+              </span>
+            ) : testResult && !testResult.ok ? (
+              <span className="text-amberState font-mono font-medium truncate block flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 text-amberState inline shrink-0" />
+                <span>Sin conexión ({config.apiBaseUrl})</span>
+              </span>
+            ) : config.isApiConfigured ? (
+              <span className="text-ink font-mono font-medium truncate block">
+                Configurado ({config.apiBaseUrl})
+              </span>
             ) : (
-              <span className="text-amber-400 font-bold italic">⚠️ No configurada (sin URL base)</span>
+              <span className="text-amberState font-medium block">
+                No configurado
+              </span>
             )}
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1">
-            <span className="text-slate-400 block font-sans font-semibold">UI_PORT (Configurado):</span>
-            <span className="text-amber-300 font-bold">{config.uiPort}</span>
+          <div className="p-3 rounded bg-surface-subtle border border-surface-border space-y-1">
+            <span className="text-ink-muted block font-medium">Servicio de Autenticación:</span>
+            <span className="text-forest font-medium block">
+              {config.isFirebaseConfigured ? 'Configurado' : 'Disponible'}
+            </span>
           </div>
 
-          <div className="p-3.5 rounded-xl bg-slate-900/90 border border-slate-800 space-y-1 md:col-span-2">
-            <span className="text-slate-400 block font-sans font-semibold">Firebase Authentication Web SDK:</span>
-            {config.isFirebaseConfigured ? (
-              <span className="text-emerald-400 font-bold">
-                ✓ Configurado (Project ID: {config.firebase.projectId})
-              </span>
-            ) : (
-              <span className="text-amber-400 font-bold italic">
-                ⚠️ Pendiente (requiere VITE_FIREBASE_API_KEY y VITE_FIREBASE_PROJECT_ID en .env)
-              </span>
-            )}
+          <div className="p-3 rounded bg-surface-subtle border border-surface-border space-y-1">
+            <span className="text-ink-muted block font-medium">Entorno:</span>
+            <span className="text-ink font-mono font-medium block">
+              {config.appEnv || 'development'} (puerto :{config.uiPort || (typeof window !== 'undefined' && window.location.port ? window.location.port : '5173')})
+            </span>
           </div>
         </div>
 
-        <div className="p-3 rounded-xl bg-slate-950/70 border border-slate-800/80 text-[11px] text-slate-400 flex items-start gap-2">
-          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-          <span>
-            <strong>Cumplimiento de Requisitos:</strong> Las variables <code className="text-slate-200">VITE_*</code> se inyectan en tiempo de build tanto en Vite local como en el <code className="text-slate-200">Dockerfile</code> mediante directivas <code className="text-slate-200">ARG</code>, y en <code className="text-slate-200">docker-compose.yml</code> mediante <code className="text-slate-200">build.args</code>.
-          </span>
-        </div>
+        {/* Resultado de la comprobación del API */}
+        {testResult && (
+          <div className={`mt-3 p-3.5 rounded border text-xs leading-relaxed ${
+            testResult.ok 
+              ? 'bg-forest/10 border-forest/30 text-forest' 
+              : 'bg-amberState-subtle border-amberState-border text-amberState'
+          }`}>
+            <div className="font-semibold text-xs mb-1 flex items-center gap-1.5">
+              {testResult.ok ? (
+                <CheckCircle2 className="w-3.5 h-3.5 text-forest shrink-0" />
+              ) : (
+                <AlertCircle className="w-3.5 h-3.5 text-amberState shrink-0" />
+              )}
+              <span className={testResult.ok ? 'text-forest font-bold' : 'text-amberState font-bold'}>
+                {testResult.ok ? 'Conexión exitosa con el backend' : 'Respuesta del servidor:'}
+              </span>
+            </div>
+            <p className="text-ink-secondary">
+              {testResult.ok
+                ? 'El servicio backend (/api/health) respondió correctamente (HTTP 200 OK).'
+                : testResult.isConfigError
+                ? 'El cliente HTTP no tiene configurada la variable de URL del API.'
+                : 'Respuesta de /health:'}
+            </p>
+            <pre className="mt-2 p-2.5 rounded bg-white border border-surface-border font-mono text-ink text-[11px] overflow-x-auto">
+              {testResult.error || JSON.stringify(testResult.data || testResult, null, 2)}
+            </pre>
+          </div>
+        )}
       </div>
 
     </div>

@@ -52,7 +52,7 @@ import {
 } from '../services/urlAuthService';
 import { getDomain, normalizeDomain } from '../services/domainService';
 
-// Ejemplos comunes de wildcards según docs/modelo-datos.md líneas 103-115
+// Ejemplos comunes de wildcards según especificaciones líneas 103-115
 const WILDCARD_EXAMPLES = [
   { pattern: '/*', label: 'Cualquier ruta (catch-all)', desc: 'Coincide con toda petición' },
   { pattern: '/images/*', label: 'Rutas por prefijo', desc: 'Coincide con /images/logo.png, /images/a/b.jpg' },
@@ -62,7 +62,7 @@ const WILDCARD_EXAMPLES = [
 ];
 
 /**
- * Pantalla de Administración de URLs y Políticas de Caché y Autenticación (T-36, T-37, T-38).
+ * Pantalla de Administración de URLs y Políticas de Caché y Autenticación (, , ).
  * Permite listar, crear, modificar y eliminar URLs con wildcards, configurar TTL y políticas de reemplazo
  * por tipo de archivo (fileTypes), y administrar API keys y usuarios autorizados.
  */
@@ -76,7 +76,7 @@ export default function DomainUrlsPage() {
   const [apiError, setApiError] = useState(null);
   const [actionSuccess, setActionSuccess] = useState(null);
 
-  // Estado para el modal de Crear/Editar URL (T-36 y T-37)
+  // Estado para el modal de Crear/Editar URL ( y )
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingUrl, setEditingUrl] = useState(null); // null = creando, objeto = editando
   const [formData, setFormData] = useState({
@@ -89,7 +89,7 @@ export default function DomainUrlsPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [modalError, setModalError] = useState(null);
 
-  // Sub-formulario para agregar/editar una extensión en fileTypes (T-37)
+  // Sub-formulario para agregar/editar una extensión en fileTypes ()
   const [newFileType, setNewFileType] = useState({
     ext: '',
     ttlSeconds: 300,
@@ -106,7 +106,7 @@ export default function DomainUrlsPage() {
   const [showWildcardGuide, setShowWildcardGuide] = useState(false);
 
   // =========================================================================
-  // Estados para T-38: Administración de Credenciales por URL
+  // Estados para Administración de Credenciales por URL
   // =========================================================================
 
   // Modal de API Keys (auth.type === 'api_key')
@@ -160,7 +160,7 @@ export default function DomainUrlsPage() {
     setLoading(false);
 
     if (urlsRes.ok) {
-      // Ordenar por especificidad descendente (más específico primero según docs/modelo-datos.md)
+      // Ordenar por especificidad descendente (más específico primero según especificaciones)
       const sorted = [...urlsRes.data].sort((a, b) => {
         return calculatePatternSpecificity(b.pattern) - calculatePatternSpecificity(a.pattern);
       });
@@ -177,7 +177,7 @@ export default function DomainUrlsPage() {
   }, [domainName]);
 
   // =========================================================================
-  // Manejadores de URL Modal (T-36 y T-37)
+  // Manejadores de URL Modal ( y )
   // =========================================================================
 
   const handleOpenCreateModal = () => {
@@ -264,7 +264,9 @@ export default function DomainUrlsPage() {
     setModalError(null);
 
     // Validación del formulario con reglas de wildcards y fileTypes
-    const validation = validateUrlForm(formData);
+    const otherUrls = urls.filter((u) => u.id !== editingUrl?.id);
+    const currentAllocatedBytes = otherUrls.reduce((sum, u) => sum + (Number(u.cacheSizeBytes) || 0), 0);
+    const validation = validateUrlForm(formData, domainInfo?.cacheSizeBytes, currentAllocatedBytes);
     if (!validation.valid) {
       setFormErrors(validation.errors);
       return;
@@ -347,7 +349,7 @@ export default function DomainUrlsPage() {
   };
 
   // =========================================================================
-  // Manejadores de T-38: API Keys (auth.type === 'api_key')
+  // Manejadores de API Keys (auth.type === 'api_key')
   // =========================================================================
 
   const handleOpenApiKeysModal = async (urlItem) => {
@@ -413,7 +415,7 @@ export default function DomainUrlsPage() {
   };
 
   // =========================================================================
-  // Manejadores de T-38: Usuarios y Contraseñas (auth.type === 'user_password')
+  // Manejadores de Usuarios y Contraseñas (auth.type === 'user_password')
   // =========================================================================
 
   const handleOpenUrlUsersModal = async (urlItem) => {
@@ -520,7 +522,7 @@ export default function DomainUrlsPage() {
     <div className="max-w-6xl mx-auto space-y-8 animate-fadeIn pb-12">
 
       {/* Navegación y Encabezado */}
-      <div className="space-y-3 pb-4 border-b border-slate-800">
+      <div className="space-y-3 pb-4 border-b border-surface-border">
         <div className="flex items-center gap-2">
           <Link
             to="/dominios"
@@ -529,25 +531,23 @@ export default function DomainUrlsPage() {
             <ArrowLeft className="w-3.5 h-3.5" />
             <span>Volver a Dominios</span>
           </Link>
-          <span className="text-slate-600">/</span>
-          <span className="text-xs font-mono text-slate-300">{domainName}</span>
+          <span className="text-ink-faint">/</span>
+          <span className="text-xs font-mono text-ink-secondary">{domainName}</span>
         </div>
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <div className="flex flex-wrap items-center gap-2 mb-1.5">
-              <StatusBadge label="T-36: URLs" status="info" />
-              <StatusBadge label="T-37: Caché & TTL" status="info" />
-              <StatusBadge label="T-38: Auth por URL" status="info" />
-              <span className="text-xs font-mono text-slate-400 bg-slate-900/80 px-2 py-0.5 rounded border border-slate-800">
+              <span className="text-xs font-mono text-forest bg-forest-subtle px-2 py-0.5 rounded border border-forest/20">Enrutamiento jerárquico</span>
+              <span className="text-xs font-mono text-ink-secondary bg-white/80 px-2 py-0.5 rounded border border-surface-border">
                 Wildcards (*)
               </span>
             </div>
-            <h1 className="text-2xl sm:text-3xl font-extrabold text-white tracking-tight flex items-center gap-2.5">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-ink tracking-tight flex items-center gap-2.5">
               <span className="font-mono text-indigo-300">{domainName}</span>
-              <span className="text-slate-500 font-sans text-lg font-normal">— URLs y Caché</span>
+              <span className="text-ink-muted font-sans text-lg font-normal">— URLs y Caché</span>
             </h1>
-            <p className="text-xs sm:text-sm text-slate-400 mt-1">
+            <p className="text-xs sm:text-sm text-ink-secondary mt-1">
               Configure patrones de ruta, partición de memoria, políticas de reemplazo con TTL por archivo y credenciales de acceso.
             </p>
           </div>
@@ -556,7 +556,7 @@ export default function DomainUrlsPage() {
             <button
               onClick={fetchData}
               disabled={loading}
-              className="p-2.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-all cursor-pointer disabled:opacity-50"
+              className="p-2.5 rounded-xl bg-surface-subtle/80 hover:bg-surface-subtle text-ink-secondary border border-surface-border transition-all cursor-pointer disabled:opacity-50"
               title="Refrescar lista"
             >
               <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
@@ -565,7 +565,7 @@ export default function DomainUrlsPage() {
             <button
               onClick={handleOpenCreateModal}
               id="create-url-button"
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs sm:text-sm font-semibold shadow-lg shadow-indigo-600/25 transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-forest hover:bg-forest-hover text-white shadow-subtle text-xs sm:text-sm font-semibold shadow-lg shadow-subtle transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Nueva URL</span>
@@ -576,16 +576,16 @@ export default function DomainUrlsPage() {
 
       {/* Tarjeta de métricas del dominio (Capacidad asignada vs total) */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-4 rounded-2xl glass-card border border-slate-800 space-y-1">
-          <span className="text-xs text-slate-400 flex items-center gap-1.5">
+        <div className="p-4 rounded-2xl bg-surface shadow-card border border-surface-border space-y-1">
+          <span className="text-xs text-ink-secondary flex items-center gap-1.5">
             <Globe className="w-3.5 h-3.5 text-sky-400" />
             <span>Dominio contenedor:</span>
           </span>
           <span className="text-base font-bold text-white font-mono">{domainName}</span>
         </div>
 
-        <div className="p-4 rounded-2xl glass-card border border-slate-800 space-y-1">
-          <span className="text-xs text-slate-400 flex items-center gap-1.5">
+        <div className="p-4 rounded-2xl bg-surface shadow-card border border-surface-border space-y-1">
+          <span className="text-xs text-ink-secondary flex items-center gap-1.5">
             <Layers className="w-3.5 h-3.5 text-indigo-400" />
             <span>URLs configuradas:</span>
           </span>
@@ -594,8 +594,8 @@ export default function DomainUrlsPage() {
           </span>
         </div>
 
-        <div className="p-4 rounded-2xl glass-card border border-slate-800 space-y-1">
-          <span className="text-xs text-slate-400 flex items-center gap-1.5">
+        <div className="p-4 rounded-2xl bg-surface shadow-card border border-surface-border space-y-1">
+          <span className="text-xs text-ink-secondary flex items-center gap-1.5">
             <HardDrive className="w-3.5 h-3.5 text-emerald-400" />
             <span>Caché asignada a URLs:</span>
           </span>
@@ -604,7 +604,7 @@ export default function DomainUrlsPage() {
               {formatBytes(totalAllocatedBytes)}
             </span>
             {domainInfo?.cacheSizeBytes && (
-              <span className="text-xs text-slate-500 font-mono">
+              <span className="text-xs text-ink-muted font-mono">
                 / {formatBytes(domainInfo.cacheSizeBytes)}
               </span>
             )}
@@ -619,7 +619,7 @@ export default function DomainUrlsPage() {
             <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
             <span>{actionSuccess}</span>
           </div>
-          <button onClick={() => setActionSuccess(null)} className="text-emerald-400 hover:text-white p-1">
+          <button onClick={() => setActionSuccess(null)} className="text-emerald-400 hover:text-ink p-1">
             <X className="w-4 h-4" />
           </button>
         </div>
@@ -637,45 +637,45 @@ export default function DomainUrlsPage() {
       )}
 
       {/* Panel explicativo de las reglas de Wildcards y Políticas (Acordeón) */}
-      <div className="rounded-2xl glass-panel border border-slate-800 overflow-hidden">
+      <div className="rounded-2xl bg-surface shadow-card border border-surface-border overflow-hidden">
         <button
           type="button"
           onClick={() => setShowWildcardGuide(!showWildcardGuide)}
-          className="w-full px-5 py-3.5 text-left text-xs sm:text-sm font-semibold text-slate-300 hover:text-white flex items-center justify-between transition-colors cursor-pointer"
+          className="w-full px-5 py-3.5 text-left text-xs sm:text-sm font-semibold text-ink-secondary hover:text-ink flex items-center justify-between transition-colors cursor-pointer"
         >
           <div className="flex items-center gap-2">
             <Code2 className="w-4 h-4 text-sky-400" />
-            <span>Especificaciones Técnicas: Wildcards, TTL y Políticas de Reemplazo (docs/modelo-datos.md)</span>
+            <span>Especificaciones Técnicas: Wildcards, TTL y Políticas de Reemplazo</span>
           </div>
           <span className="text-xs font-mono text-indigo-400">{showWildcardGuide ? 'Ocultar' : 'Ver especificaciones'}</span>
         </button>
 
         {showWildcardGuide && (
-          <div className="px-5 pb-5 pt-2 border-t border-slate-800/80 space-y-4 text-xs leading-relaxed text-slate-400">
+          <div className="px-5 pb-5 pt-2 border-t border-surface-border/80 space-y-4 text-xs leading-relaxed text-ink-secondary">
             <div className="space-y-2">
               <p>
-                <strong>Regla de Wildcards (*):</strong> El comodín <code className="text-indigo-300 bg-slate-900 px-1 py-0.5 rounded font-mono font-bold">*</code> coincide con cualquier secuencia de caracteres, incluida la vacía y barras inclinadas (<code className="text-slate-300 font-mono">/</code>). Gana el patrón <strong>más específico</strong> (más caracteres literales sin contar <code className="text-indigo-300 font-mono">*</code>).
+                <strong>Regla de Wildcards (*):</strong> El comodín <code className="text-indigo-300 bg-white px-1 py-0.5 rounded font-mono font-bold">*</code> coincide con cualquier secuencia de caracteres, incluida la vacía y barras inclinadas (<code className="text-ink-secondary font-mono">/</code>). Gana el patrón <strong>más específico</strong> (más caracteres literales sin contar <code className="text-indigo-300 font-mono">*</code>).
               </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-              <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1.5">
-                <span className="font-semibold text-slate-200 flex items-center gap-1.5">
+              <div className="p-3 rounded-xl bg-white/60 border border-surface-border space-y-1.5">
+                <span className="font-semibold text-ink font-medium flex items-center gap-1.5">
                   <Clock className="w-3.5 h-3.5 text-indigo-400" />
                   <span>Configuración de TTL por Tipo (fileTypes):</span>
                 </span>
-                <p className="text-[11px] text-slate-400">
-                  Cada extensión se define en minúscula sin punto (ej: <code className="text-slate-200">html</code>, <code className="text-slate-200">css</code>, <code className="text-slate-200">png</code>). La clave especial <code className="text-amber-300 font-bold font-mono">*</code> es el fallback por defecto. Si <code className="text-amber-300 font-mono">*</code> no se define, las extensiones no listadas no se cachean y van directo al origen.
+                <p className="text-[11px] text-ink-secondary">
+                  Cada extensión se define en minúscula sin punto (ej: <code className="text-ink font-medium">html</code>, <code className="text-ink font-medium">css</code>, <code className="text-ink font-medium">png</code>). La clave especial <code className="text-amber-300 font-bold font-mono">*</code> es el fallback por defecto. Si <code className="text-amber-300 font-mono">*</code> no se define, las extensiones no listadas no se cachean y van directo al origen.
                 </p>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-900/60 border border-slate-800 space-y-1.5">
-                <span className="font-semibold text-slate-200 flex items-center gap-1.5">
+              <div className="p-3 rounded-xl bg-white/60 border border-surface-border space-y-1.5">
+                <span className="font-semibold text-ink font-medium flex items-center gap-1.5">
                   <Sliders className="w-3.5 h-3.5 text-amber-400" />
                   <span>Políticas de Reemplazo Soportadas (policy):</span>
                 </span>
-                <p className="text-[11px] text-slate-400">
-                  <strong className="text-white">LRU:</strong> Menos recientemente usado • <strong className="text-white">LFU:</strong> Menos frecuentemente usado • <strong className="text-white">FIFO:</strong> Primero en entrar • <strong className="text-white">MRU:</strong> Más recientemente usado • <strong className="text-white">RANDOM:</strong> Aleatorio.
+                <p className="text-[11px] text-ink-secondary">
+                  <strong className="text-ink">LRU:</strong> Menos recientemente usado • <strong className="text-ink">LFU:</strong> Menos frecuentemente usado • <strong className="text-ink">FIFO:</strong> Primero en entrar • <strong className="text-ink">MRU:</strong> Más recientemente usado • <strong className="text-ink">RANDOM:</strong> Aleatorio.
                 </p>
               </div>
             </div>
@@ -685,26 +685,26 @@ export default function DomainUrlsPage() {
 
       {/* Lista de URLs del Dominio */}
       {loading ? (
-        <div className="p-12 text-center glass-panel rounded-3xl border border-slate-800 space-y-3">
+        <div className="p-12 text-center bg-surface shadow-card rounded-3xl border border-surface-border space-y-3">
           <div className="w-8 h-8 border-2 border-indigo-500/30 border-t-indigo-500 rounded-full animate-spin mx-auto" />
-          <p className="text-sm text-slate-400">Consultando URLs del dominio...</p>
+          <p className="text-sm text-ink-secondary">Consultando URLs del dominio...</p>
         </div>
       ) : urls.length === 0 ? (
         /* Estado vacío */
-        <div className="p-10 sm:p-14 text-center glass-panel rounded-3xl border border-slate-800 space-y-4">
+        <div className="p-10 sm:p-14 text-center bg-surface shadow-card rounded-3xl border border-surface-border space-y-4">
           <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-indigo-400 flex items-center justify-center mx-auto">
             <Layers className="w-7 h-7" />
           </div>
           <div className="max-w-md mx-auto space-y-1">
-            <h3 className="text-lg font-bold text-white">No hay URLs configuradas en este dominio</h3>
-            <p className="text-xs sm:text-sm text-slate-400 leading-relaxed">
+            <h3 className="text-lg font-bold text-ink">No hay URLs configuradas en este dominio</h3>
+            <p className="text-xs sm:text-sm text-ink-secondary leading-relaxed">
               Cree un patrón de ruta (por ejemplo <code className="text-indigo-300 font-mono">/*</code> para atender todo el dominio o <code className="text-sky-300 font-mono">/images/*</code> para archivos estáticos) para que la caché zonal comience a cachear.
             </p>
           </div>
           <div className="pt-2">
             <button
               onClick={handleOpenCreateModal}
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-sm font-semibold shadow-lg shadow-indigo-600/25 transition-all cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-forest hover:bg-forest-hover text-white shadow-subtle text-sm font-semibold shadow-lg shadow-subtle transition-all cursor-pointer"
             >
               <Plus className="w-4 h-4" />
               <span>Crear Primera URL</span>
@@ -714,12 +714,12 @@ export default function DomainUrlsPage() {
       ) : (
         /* Tabla/Tarjetas de URLs ordenadas por especificidad */
         <div className="space-y-3">
-          <div className="flex items-center justify-between text-xs text-slate-400 px-1">
+          <div className="flex items-center justify-between text-xs text-ink-secondary px-1">
             <span>Listado ordenado por especificidad (la primera coincidencia atiende la petición):</span>
             <span className="font-mono">{urls.length} URLs</span>
           </div>
 
-          <div className="divide-y divide-slate-800/80 rounded-2xl glass-panel border border-slate-800 overflow-hidden">
+          <div className="divide-y divide-slate-800/80 rounded-2xl bg-surface shadow-card border border-surface-border overflow-hidden">
             {urls.map((urlItem, idx) => {
               const specificity = calculatePatternSpecificity(urlItem.pattern);
               const authType = urlItem.auth?.type || 'none';
@@ -728,29 +728,29 @@ export default function DomainUrlsPage() {
               return (
                 <div
                   key={urlItem.id || urlItem.pattern}
-                  className="p-4 sm:p-5 flex flex-col gap-3 hover:bg-slate-900/40 transition-colors"
+                  className="p-4 sm:p-5 flex flex-col gap-3 hover:bg-white/40 transition-colors"
                 >
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-start gap-3">
-                      <div className="w-7 h-7 rounded-lg bg-slate-900 border border-slate-800 flex items-center justify-center text-xs font-mono text-slate-500 shrink-0 mt-0.5">
+                      <div className="w-7 h-7 rounded-lg bg-white border border-surface-border flex items-center justify-center text-xs font-mono text-ink-muted shrink-0 mt-0.5">
                         #{idx + 1}
                       </div>
 
                       <div className="space-y-1.5">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="font-mono font-bold text-base text-white bg-slate-950/80 px-2.5 py-0.5 rounded-lg border border-slate-800">
+                          <span className="font-mono font-bold text-base text-white bg-white/80 px-2.5 py-0.5 rounded-lg border border-surface-border">
                             {urlItem.pattern}
                           </span>
 
                           {/* Badge de especificidad */}
-                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-900 text-slate-400 border border-slate-800">
+                          <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-white text-ink-secondary border border-surface-border">
                             Especificidad: {specificity} caracteres
                           </span>
 
-                          {/* Badge de autenticación (T-38) */}
+                          {/* Badge de autenticación () */}
                           <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border flex items-center gap-1 ${
                             authType === 'none'
-                              ? 'bg-slate-900 text-slate-400 border-slate-800'
+                              ? 'bg-white text-ink-secondary border-surface-border'
                               : authType === 'api_key'
                               ? 'bg-amber-950/80 text-amber-300 border-amber-800/60'
                               : 'bg-purple-950/80 text-purple-300 border-purple-800/60'
@@ -771,9 +771,9 @@ export default function DomainUrlsPage() {
                           </span>
                         </div>
 
-                        <div className="flex items-center gap-3 text-xs text-slate-400 font-mono">
+                        <div className="flex items-center gap-3 text-xs text-ink-secondary font-mono">
                           <span>Caché asignada: <strong className="text-emerald-300">{formatBytes(urlItem.cacheSizeBytes)}</strong></span>
-                          {urlItem.id && <span className="text-slate-600">• ID: {urlItem.id}</span>}
+                          {urlItem.id && <span className="text-ink-faint">• ID: {urlItem.id}</span>}
                         </div>
                       </div>
                     </div>
@@ -781,7 +781,7 @@ export default function DomainUrlsPage() {
                     {/* Acciones de la URL */}
                     <div className="flex items-center gap-2 self-end sm:self-center">
 
-                      {/* Botón T-38: Administrar Credenciales de autenticación */}
+                      {/* Botón Administrar Credenciales de autenticación */}
                       {authType === 'api_key' && (
                         <button
                           onClick={() => handleOpenApiKeysModal(urlItem)}
@@ -808,7 +808,7 @@ export default function DomainUrlsPage() {
 
                       <button
                         onClick={() => handleOpenEditModal(urlItem)}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-xs font-medium border border-slate-700 transition-all cursor-pointer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-subtle/80 hover:bg-surface-subtle text-ink-secondary text-xs font-medium border border-surface-border transition-all cursor-pointer"
                         title="Editar URL y Caché"
                       >
                         <Edit3 className="w-3.5 h-3.5 text-indigo-400" />
@@ -817,7 +817,7 @@ export default function DomainUrlsPage() {
 
                       <button
                         onClick={() => setUrlToDelete(urlItem)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/40 border border-transparent hover:border-rose-900/50 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-ink-secondary hover:text-rose-400 hover:bg-rose-950/40 border border-transparent hover:border-rose-900/50 transition-colors cursor-pointer"
                         title="Eliminar URL"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -825,9 +825,9 @@ export default function DomainUrlsPage() {
                     </div>
                   </div>
 
-                  {/* Sección T-37: Chips de fileTypes con TTL y Políticas de reemplazo */}
-                  <div className="pt-2 border-t border-slate-800/50 flex flex-wrap items-center gap-1.5">
-                    <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1 mr-1">
+                  {/* Sección Chips de fileTypes con TTL y Políticas de reemplazo */}
+                  <div className="pt-2 border-t border-surface-border/50 flex flex-wrap items-center gap-1.5">
+                    <span className="text-[11px] text-ink-secondary font-medium flex items-center gap-1 mr-1">
                       <Sliders className="w-3 h-3 text-indigo-400" />
                       <span>Caché por tipo ({fileTypesEntries.length}):</span>
                     </span>
@@ -835,20 +835,20 @@ export default function DomainUrlsPage() {
                       fileTypesEntries.map(([ext, cfg]) => (
                         <span
                           key={ext}
-                          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-[10px] font-mono text-slate-300"
+                          className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white border border-surface-border text-[10px] font-mono text-ink-secondary"
                           title={`Extensión: ${ext} | TTL: ${cfg.ttlSeconds}s | Política de reemplazo: ${cfg.policy}`}
                         >
                           <span className="text-indigo-300 font-bold">{ext === '*' ? '*' : `.${ext}`}</span>
-                          <span className="text-slate-600">/</span>
+                          <span className="text-ink-faint">/</span>
                           <span className="text-emerald-300 font-medium">{formatTtl(cfg.ttlSeconds)}</span>
-                          <span className="text-slate-600">/</span>
+                          <span className="text-ink-faint">/</span>
                           <span className="text-amber-300 font-bold bg-amber-950/40 px-1 rounded border border-amber-900/40">
                             {cfg.policy}
                           </span>
                         </span>
                       ))
                     ) : (
-                      <span className="text-[10px] text-slate-500 italic">
+                      <span className="text-[10px] text-ink-muted italic">
                         Sin tipos específicos configurados (sin regla "*" no se cachean extensiones)
                       </span>
                     )}
@@ -862,28 +862,28 @@ export default function DomainUrlsPage() {
       )}
 
       {/* =========================================================================
-       * Modal Crear / Editar URL (T-36 y T-37)
+       * Modal Crear / Editar URL
        * ========================================================================= */}
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn overflow-y-auto">
-          <div className="w-full max-w-2xl my-8 p-6 rounded-3xl glass-panel border border-slate-800 bg-surface-dark space-y-5 shadow-2xl">
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 animate-fadeIn overflow-y-auto">
+          <div className="w-full max-w-2xl my-8 p-6 rounded-3xl bg-surface shadow-card border border-surface-border bg-surface space-y-5 shadow-2xl">
+            <div className="flex items-center justify-between pb-3 border-b border-surface-border">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 flex items-center justify-center">
                   {editingUrl ? <Edit3 className="w-4 h-4" /> : <Plus className="w-4 h-4" />}
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">
+                  <h3 className="text-base font-bold text-ink">
                     {editingUrl ? 'Modificar URL y Configuración de Caché' : 'Nueva URL para el Dominio'}
                   </h3>
-                  <span className="text-xs text-slate-400 font-mono">{domainName}</span>
+                  <span className="text-xs text-ink-secondary font-mono">{domainName}</span>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => setIsModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                className="text-ink-secondary hover:text-ink p-1 rounded-lg hover:bg-surface-subtle transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -900,7 +900,7 @@ export default function DomainUrlsPage() {
 
               {/* Campo: Patrón de URL */}
               <div className="space-y-1.5">
-                <label htmlFor="pattern" className="block text-xs font-semibold text-slate-200 uppercase tracking-wider">
+                <label htmlFor="pattern" className="block text-xs font-semibold text-ink font-medium uppercase tracking-wider">
                   Patrón de Ruta (con Wildcards) <span className="text-rose-400">*</span>
                 </label>
                 <input
@@ -914,10 +914,10 @@ export default function DomainUrlsPage() {
                   }}
                   disabled={isSubmitting}
                   placeholder="/* o /images/* o /*.css"
-                  className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border text-slate-100 text-sm font-mono placeholder-slate-500 focus:outline-none transition-all ${
+                  className={`w-full px-3.5 py-2.5 rounded-xl bg-white border text-ink text-sm font-mono placeholder-ink-muted focus:outline-none transition-all ${
                     formErrors.pattern
                       ? 'border-rose-500 focus:ring-1 focus:ring-rose-500'
-                      : 'border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                      : 'border-surface-border focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
                   }`}
                 />
                 {formErrors.pattern && (
@@ -929,7 +929,7 @@ export default function DomainUrlsPage() {
 
                 {/* Accesos rápidos de patrones */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[10px] text-slate-500">Insertar ejemplo:</span>
+                  <span className="text-[10px] text-ink-muted">Insertar ejemplo:</span>
                   {WILDCARD_EXAMPLES.map((ex) => (
                     <button
                       key={ex.pattern}
@@ -938,7 +938,7 @@ export default function DomainUrlsPage() {
                         setFormData({ ...formData, pattern: ex.pattern });
                         if (formErrors.pattern) setFormErrors({ ...formErrors, pattern: null });
                       }}
-                      className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 text-[10px] font-mono transition-colors cursor-pointer"
+                      className="px-2 py-0.5 rounded bg-white hover:bg-surface-subtle text-ink-secondary hover:text-ink border border-surface-border text-[10px] font-mono transition-colors cursor-pointer"
                       title={ex.desc}
                     >
                       {ex.pattern}
@@ -950,7 +950,7 @@ export default function DomainUrlsPage() {
               {/* Campo: Tamaño de Caché (bytes) */}
               <div className="space-y-1.5">
                 <div className="flex items-center justify-between">
-                  <label htmlFor="cacheSizeBytes" className="block text-xs font-semibold text-slate-200 uppercase tracking-wider">
+                  <label htmlFor="cacheSizeBytes" className="block text-xs font-semibold text-ink font-medium uppercase tracking-wider">
                     Tamaño de Caché Asignado (bytes) <span className="text-rose-400">*</span>
                   </label>
                   <span className="text-xs font-mono text-emerald-300">
@@ -969,10 +969,10 @@ export default function DomainUrlsPage() {
                     if (formErrors.cacheSizeBytes) setFormErrors({ ...formErrors, cacheSizeBytes: null });
                   }}
                   disabled={isSubmitting}
-                  className={`w-full px-3.5 py-2.5 rounded-xl bg-slate-900 border text-slate-100 text-sm font-mono placeholder-slate-500 focus:outline-none transition-all ${
+                  className={`w-full px-3.5 py-2.5 rounded-xl bg-white border text-ink text-sm font-mono placeholder-ink-muted focus:outline-none transition-all ${
                     formErrors.cacheSizeBytes
                       ? 'border-rose-500 focus:ring-1 focus:ring-rose-500'
-                      : 'border-slate-800 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
+                      : 'border-surface-border focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500'
                   }`}
                 />
                 {formErrors.cacheSizeBytes && (
@@ -982,14 +982,14 @@ export default function DomainUrlsPage() {
 
               {/* Campo: Tipo de Autenticación */}
               <div className="space-y-2">
-                <label className="block text-xs font-semibold text-slate-200 uppercase tracking-wider">
-                  Mecanismo de Autenticación (docs/modelo-datos.md) <span className="text-rose-400">*</span>
+                <label className="block text-xs font-semibold text-ink font-medium uppercase tracking-wider">
+                  Mecanismo de Autenticación <span className="text-rose-400">*</span>
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
                   <label className={`p-3 rounded-xl border flex flex-col gap-1 cursor-pointer transition-all ${
                     formData.authType === 'none'
                       ? 'bg-indigo-600/20 border-indigo-500 text-white'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                      : 'bg-white border-surface-border text-ink-secondary hover:text-ink'
                   }`}>
                     <div className="flex items-center gap-2 font-semibold">
                       <input
@@ -1002,13 +1002,13 @@ export default function DomainUrlsPage() {
                       />
                       <span>Pública (none)</span>
                     </div>
-                    <span className="text-[10px] text-slate-500">Sin credenciales requeridas</span>
+                    <span className="text-[10px] text-ink-muted">Sin credenciales requeridas</span>
                   </label>
 
                   <label className={`p-3 rounded-xl border flex flex-col gap-1 cursor-pointer transition-all ${
                     formData.authType === 'api_key'
                       ? 'bg-amber-600/20 border-amber-500 text-white'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                      : 'bg-white border-surface-border text-ink-secondary hover:text-ink'
                   }`}>
                     <div className="flex items-center gap-2 font-semibold">
                       <input
@@ -1021,13 +1021,13 @@ export default function DomainUrlsPage() {
                       />
                       <span>API Key</span>
                     </div>
-                    <span className="text-[10px] text-slate-500">Encabezado x-api-key</span>
+                    <span className="text-[10px] text-ink-muted">Encabezado x-api-key</span>
                   </label>
 
                   <label className={`p-3 rounded-xl border flex flex-col gap-1 cursor-pointer transition-all ${
                     formData.authType === 'user_password'
                       ? 'bg-purple-600/20 border-purple-500 text-white'
-                      : 'bg-slate-900 border-slate-800 text-slate-400 hover:text-white'
+                      : 'bg-white border-surface-border text-ink-secondary hover:text-ink'
                   }`}>
                     <div className="flex items-center gap-2 font-semibold">
                       <input
@@ -1040,24 +1040,35 @@ export default function DomainUrlsPage() {
                       />
                       <span>Usuario/Clave</span>
                     </div>
-                    <span className="text-[10px] text-slate-500">Cookie zc_session</span>
+                    <span className="text-[10px] text-ink-muted">Cookie zc_session</span>
                   </label>
                 </div>
+                {editingUrl && editingUrl.auth?.type && editingUrl.auth.type !== formData.authType && editingUrl.auth.type !== 'none' && (
+                  <div className="p-3 rounded-xl bg-amber-950/60 border border-amber-800/80 text-amber-200 text-xs flex items-start gap-2.5 mt-2 animate-fadeIn">
+                    <AlertTriangle className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                    <div>
+                      <strong className="text-ink block">Aviso importante sobre credenciales:</strong>
+                      <span>
+                        Cambiar el mecanismo de autenticación de <code className="font-mono text-amber-300 font-bold">{editingUrl.auth.type}</code> a <code className="font-mono text-amber-300 font-bold">{formData.authType}</code> eliminará de forma irreversible todas las credenciales del tipo anterior (API keys o usuarios y sus sesiones activas asociadas a esta URL).
+                      </span>
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* =========================================================================
-               * T-37: Configuración de Caché por URL: fileTypes, TTL y Políticas de Reemplazo
+               * Configuración de Caché por URL: fileTypes, TTL y Políticas de Reemplazo
                * ========================================================================= */}
-              <div className="p-4 rounded-2xl bg-slate-950/70 border border-slate-800 space-y-3.5">
-                <div className="flex items-center justify-between pb-2 border-b border-slate-800/80">
+              <div className="p-4 rounded-2xl bg-white/70 border border-surface-border space-y-3.5">
+                <div className="flex items-center justify-between pb-2 border-b border-surface-border/80">
                   <div className="flex items-center gap-2">
                     <Sliders className="w-4 h-4 text-indigo-400" />
                     <div>
-                      <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-                        Configuración de Caché por URL (T-37: fileTypes)
+                      <h4 className="text-xs font-bold text-ink uppercase tracking-wider">
+                        Configuración de Caché por Tipo de Archivo
                       </h4>
-                      <p className="text-[11px] text-slate-400">
-                        Defina TTL en segundos y política de reemplazo por extensión. Use "*" como regla comodín general.
+                      <p className="text-[11px] text-ink-secondary">
+                        Defina TTL en segundos y política de reemplazo por extensión. Use "*" como regla comodín general. Si no se incluye "*" y la extensión solicitada no figura en esta lista, el recurso no se almacenará en la caché (bypass directo al origen según contrato §2).
                       </p>
                     </div>
                   </div>
@@ -1069,34 +1080,34 @@ export default function DomainUrlsPage() {
                 {/* Sub-formulario para agregar una extensión */}
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 text-xs">
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">Extensión:</label>
+                    <label className="block text-[10px] font-semibold text-ink-secondary mb-1">Extensión:</label>
                     <input
                       type="text"
                       placeholder="html, css, js o *"
                       value={newFileType.ext}
                       onChange={(e) => setNewFileType({ ...newFileType, ext: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 font-mono text-xs focus:outline-none focus:border-indigo-500"
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-surface-border text-ink font-medium font-mono text-xs focus:outline-none focus:border-indigo-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">TTL (segundos):</label>
+                    <label className="block text-[10px] font-semibold text-ink-secondary mb-1">TTL (segundos):</label>
                     <input
                       type="number"
                       min="0"
                       placeholder="ej. 60, 3600"
                       value={newFileType.ttlSeconds}
                       onChange={(e) => setNewFileType({ ...newFileType, ttlSeconds: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 font-mono text-xs focus:outline-none focus:border-indigo-500"
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-surface-border text-ink font-medium font-mono text-xs focus:outline-none focus:border-indigo-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-semibold text-slate-400 mb-1">Política (policy):</label>
+                    <label className="block text-[10px] font-semibold text-ink-secondary mb-1">Política (policy):</label>
                     <select
                       value={newFileType.policy}
                       onChange={(e) => setNewFileType({ ...newFileType, policy: e.target.value })}
-                      className="w-full px-2.5 py-1.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 text-xs font-mono focus:outline-none focus:border-indigo-500 cursor-pointer"
+                      className="w-full px-2.5 py-1.5 rounded-lg bg-white border border-surface-border text-ink font-medium text-xs font-mono focus:outline-none focus:border-indigo-500 cursor-pointer"
                     >
                       {ALLOWED_CACHE_POLICIES.map((pol) => (
                         <option key={pol} value={pol}>
@@ -1110,7 +1121,7 @@ export default function DomainUrlsPage() {
                     <button
                       type="button"
                       onClick={handleAddOrUpdateFileType}
-                      className="w-full py-1.5 px-3 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors cursor-pointer"
+                      className="w-full py-1.5 px-3 rounded-lg bg-forest hover:bg-forest-hover text-white shadow-subtle font-semibold text-xs transition-colors cursor-pointer"
                     >
                       + Agregar Tipo
                     </button>
@@ -1124,15 +1135,15 @@ export default function DomainUrlsPage() {
                   </p>
                 )}
 
-                {/* Accesos rápidos con presets estándar de docs/modelo-datos.md */}
+                {/* Accesos rápidos con presets estándar de especificaciones */}
                 <div className="flex flex-wrap items-center gap-1.5 pt-1">
-                  <span className="text-[10px] text-slate-500">Presets sugeridos:</span>
+                  <span className="text-[10px] text-ink-muted">Presets sugeridos:</span>
                   {COMMON_FILE_TYPES.map((preset) => (
                     <button
                       key={preset.ext}
                       type="button"
                       onClick={() => handleApplyPreset(preset)}
-                      className="px-2 py-0.5 rounded bg-slate-900 hover:bg-slate-800 text-slate-400 hover:text-white border border-slate-800 text-[10px] font-mono transition-colors cursor-pointer"
+                      className="px-2 py-0.5 rounded bg-white hover:bg-surface-subtle text-ink-secondary hover:text-ink border border-surface-border text-[10px] font-mono transition-colors cursor-pointer"
                       title={`${preset.label}: ${preset.defaultTtl}s con ${preset.defaultPolicy}`}
                     >
                       {preset.ext === '*' ? '*' : `.${preset.ext}`} ({preset.defaultPolicy})
@@ -1142,12 +1153,12 @@ export default function DomainUrlsPage() {
 
                 {/* Lista actual de fileTypes configurados */}
                 <div className="pt-2">
-                  <span className="block text-[10px] font-semibold text-slate-400 uppercase tracking-wider mb-2">
+                  <span className="block text-[10px] font-semibold text-ink-secondary uppercase tracking-wider mb-2">
                     Tipos de Archivo Guardados en esta URL:
                   </span>
 
                   {Object.keys(formData.fileTypes || {}).length === 0 ? (
-                    <p className="text-xs text-slate-500 italic p-3 bg-slate-900/40 rounded-xl border border-slate-900 text-center">
+                    <p className="text-xs text-ink-muted italic p-3 bg-white/40 rounded-xl border border-slate-900 text-center">
                       No se han configurado tipos específicos. Recuerde que sin la regla comodín "*" las solicitudes no serán cacheadas.
                     </p>
                   ) : (
@@ -1155,17 +1166,17 @@ export default function DomainUrlsPage() {
                       {Object.entries(formData.fileTypes).map(([ext, cfg]) => (
                         <div
                           key={ext}
-                          className="flex items-center justify-between p-2 rounded-xl bg-slate-900/80 border border-slate-800 text-xs font-mono"
+                          className="flex items-center justify-between p-2 rounded-xl bg-white/80 border border-surface-border text-xs font-mono"
                         >
                           <div className="flex items-center gap-2">
-                            <span className="font-bold text-indigo-300 bg-slate-950 px-2 py-0.5 rounded border border-slate-800">
+                            <span className="font-bold text-indigo-300 bg-white px-2 py-0.5 rounded border border-surface-border">
                               {ext === '*' ? '*' : `.${ext}`}
                             </span>
-                            <span className="text-slate-400">
+                            <span className="text-ink-secondary">
                               TTL: <strong className="text-emerald-300">{formatTtl(cfg.ttlSeconds)}</strong>
                             </span>
-                            <span className="text-slate-600">•</span>
-                            <span className="text-slate-400">
+                            <span className="text-ink-faint">•</span>
+                            <span className="text-ink-secondary">
                               Política: <strong className="text-amber-300">{cfg.policy}</strong>
                             </span>
                           </div>
@@ -1173,7 +1184,7 @@ export default function DomainUrlsPage() {
                           <button
                             type="button"
                             onClick={() => handleRemoveFileType(ext)}
-                            className="text-slate-500 hover:text-rose-400 p-1 rounded transition-colors cursor-pointer"
+                            className="text-ink-muted hover:text-rose-400 p-1 rounded transition-colors cursor-pointer"
                             title={`Eliminar regla para .${ext}`}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -1187,19 +1198,19 @@ export default function DomainUrlsPage() {
               </div>
 
               {/* Botones de acción del Modal */}
-              <div className="pt-3 flex items-center justify-end gap-3 border-t border-slate-800">
+              <div className="pt-3 flex items-center justify-end gap-3 border-t border-surface-border">
                 <button
                   type="button"
                   onClick={() => setIsModalOpen(false)}
                   disabled={isSubmitting}
-                  className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all cursor-pointer"
+                  className="px-4 py-2 rounded-xl bg-surface-subtle hover:bg-surface-subtle text-ink-secondary text-xs font-semibold transition-all cursor-pointer"
                 >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   disabled={isSubmitting}
-                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/25 transition-all cursor-pointer disabled:opacity-50"
+                  className="inline-flex items-center gap-2 px-5 py-2 rounded-xl bg-forest hover:bg-forest-hover text-white shadow-subtle text-xs font-semibold shadow-lg shadow-subtle transition-all cursor-pointer disabled:opacity-50"
                 >
                   {isSubmitting ? (
                     <>
@@ -1218,23 +1229,23 @@ export default function DomainUrlsPage() {
       )}
 
       {/* =========================================================================
-       * Modal T-38: Administración de API Keys (auth.type === 'api_key')
+       * Modal Administración de API Keys (auth.type === 'api_key')
        * ========================================================================= */}
       {isApiKeysModalOpen && activeAuthUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn overflow-y-auto">
-          <div className="w-full max-w-2xl my-8 p-6 rounded-3xl glass-panel border border-amber-900/50 bg-surface-dark space-y-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 animate-fadeIn overflow-y-auto">
+          <div className="w-full max-w-2xl my-8 p-6 rounded-3xl bg-surface shadow-card border border-amber-900/50 bg-surface space-y-5 shadow-2xl">
 
             {/* Cabecera del modal */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-center justify-between pb-3 border-b border-surface-border">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-400 border border-amber-500/20 flex items-center justify-center">
                   <Key className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">
-                    Administración de API Keys (T-38)
+                  <h3 className="text-base font-bold text-ink">
+                    Administración de API Keys
                   </h3>
-                  <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+                  <div className="flex items-center gap-2 text-xs font-mono text-ink-secondary">
                     <span>{domainName}</span>
                     <span>•</span>
                     <span className="text-indigo-300 font-bold">{activeAuthUrl.pattern}</span>
@@ -1245,7 +1256,7 @@ export default function DomainUrlsPage() {
               <button
                 type="button"
                 onClick={() => setIsApiKeysModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                className="text-ink-secondary hover:text-ink p-1 rounded-lg hover:bg-surface-subtle transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
@@ -1259,7 +1270,7 @@ export default function DomainUrlsPage() {
                   <span>Clave Creada — Guarde su API Key ahora</span>
                 </div>
                 <p className="text-xs text-amber-200/90 leading-relaxed">
-                  Por diseño de seguridad estricto (docs/modelo-datos.md sección 3.5), el sistema almacena únicamente el hash SHA-256.
+                  Por diseño de seguridad estricto (especificaciones sección 3.5), el sistema almacena únicamente el hash SHA-256.
                   <strong> Esta es la única vez que la clave en claro será visible.</strong> Cópiela y resérvela en un lugar seguro.
                 </p>
                 <div className="flex items-center gap-2 pt-1">
@@ -1282,8 +1293,8 @@ export default function DomainUrlsPage() {
             )}
 
             {/* Formulario para generar una nueva API Key */}
-            <form onSubmit={handleCreateApiKey} className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
-              <span className="block text-xs font-bold text-slate-200 uppercase tracking-wider">
+            <form onSubmit={handleCreateApiKey} className="p-4 rounded-2xl bg-white/60 border border-surface-border space-y-3">
+              <span className="block text-xs font-bold text-ink font-medium uppercase tracking-wider">
                 Generar Nueva API Key
               </span>
               <div className="flex flex-col sm:flex-row gap-2">
@@ -1293,7 +1304,7 @@ export default function DomainUrlsPage() {
                   value={newKeyName}
                   onChange={(e) => setNewKeyName(e.target.value)}
                   disabled={isCreatingKey}
-                  className="flex-1 px-3.5 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  className="flex-1 px-3.5 py-2 rounded-xl bg-white border border-surface-border text-xs text-ink placeholder-ink-muted focus:outline-none focus:border-amber-500"
                 />
                 <button
                   type="submit"
@@ -1315,13 +1326,13 @@ export default function DomainUrlsPage() {
 
             {/* Lista de API Keys existentes para esta URL */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-400">
+              <div className="flex items-center justify-between text-xs text-ink-secondary">
                 <span>Claves autorizadas para el encabezado <code className="text-amber-300 font-mono">x-api-key</code>:</span>
                 <span className="font-mono">{apiKeys.length} keys</span>
               </div>
 
               {loadingApiKeys ? (
-                <div className="p-8 text-center glass-panel rounded-2xl border border-slate-800 text-slate-400 text-xs">
+                <div className="p-8 text-center bg-surface shadow-card rounded-2xl border border-surface-border text-ink-secondary text-xs">
                   Cargando API keys...
                 </div>
               ) : apiKeysError ? (
@@ -1333,21 +1344,21 @@ export default function DomainUrlsPage() {
                   <p>{apiKeysError}</p>
                 </div>
               ) : apiKeys.length === 0 ? (
-                <div className="p-6 text-center rounded-2xl bg-slate-950/40 border border-slate-900 text-slate-500 text-xs">
+                <div className="p-6 text-center rounded-2xl bg-white/40 border border-slate-900 text-ink-muted text-xs">
                   No hay API keys registradas para esta URL. Genere una clave arriba para permitir el acceso.
                 </div>
               ) : (
-                <div className="divide-y divide-slate-800/80 rounded-2xl bg-slate-950/60 border border-slate-800 overflow-hidden">
+                <div className="divide-y divide-slate-800/80 rounded-2xl bg-white/60 border border-surface-border overflow-hidden">
                   {apiKeys.map((k) => (
                     <div key={k.id || k.prefix} className="p-3 flex items-center justify-between gap-3 text-xs">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-white">{k.name}</span>
-                          <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-slate-900 text-amber-300 border border-slate-800">
+                          <span className="font-mono text-[11px] px-2 py-0.5 rounded bg-white text-amber-300 border border-surface-border">
                             {k.prefix}...
                           </span>
                         </div>
-                        <span className="text-[10px] text-slate-500 font-mono">
+                        <span className="text-[10px] text-ink-muted font-mono">
                           Creada: {new Date(k.createdAt || Date.now()).toLocaleString()}
                         </span>
                       </div>
@@ -1355,7 +1366,7 @@ export default function DomainUrlsPage() {
                       <button
                         type="button"
                         onClick={() => setKeyToDelete(k)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 transition-colors cursor-pointer"
+                        className="p-1.5 rounded-lg text-ink-secondary hover:text-rose-400 hover:bg-rose-950/30 transition-colors cursor-pointer"
                         title="Eliminar API Key"
                       >
                         <Trash2 className="w-4 h-4" />
@@ -1375,7 +1386,7 @@ export default function DomainUrlsPage() {
                     type="button"
                     onClick={() => setKeyToDelete(null)}
                     disabled={isDeletingKey}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
+                    className="px-3 py-1.5 rounded-lg bg-surface-subtle hover:bg-surface-subtle text-ink-secondary text-xs font-semibold cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -1391,11 +1402,11 @@ export default function DomainUrlsPage() {
               </div>
             )}
 
-            <div className="pt-2 flex justify-end border-t border-slate-800">
+            <div className="pt-2 flex justify-end border-t border-surface-border">
               <button
                 type="button"
                 onClick={() => setIsApiKeysModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-surface-subtle hover:bg-surface-subtle text-ink-secondary text-xs font-semibold transition-all cursor-pointer"
               >
                 Cerrar
               </button>
@@ -1406,23 +1417,23 @@ export default function DomainUrlsPage() {
       )}
 
       {/* =========================================================================
-       * Modal T-38: Administración de Usuarios y Claves (auth.type === 'user_password')
+       * Modal Administración de Usuarios y Claves (auth.type === 'user_password')
        * ========================================================================= */}
       {isUsersModalOpen && activeAuthUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn overflow-y-auto">
-          <div className="w-full max-w-2xl my-8 p-6 rounded-3xl glass-panel border border-purple-900/50 bg-surface-dark space-y-5 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 animate-fadeIn overflow-y-auto">
+          <div className="w-full max-w-2xl my-8 p-6 rounded-3xl bg-surface shadow-card border border-purple-900/50 bg-surface space-y-5 shadow-2xl">
 
             {/* Cabecera del modal */}
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
+            <div className="flex items-center justify-between pb-3 border-b border-surface-border">
               <div className="flex items-center gap-2.5">
                 <div className="w-9 h-9 rounded-xl bg-purple-500/10 text-purple-400 border border-purple-500/20 flex items-center justify-center">
                   <Users className="w-4 h-4" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-white">
-                    Usuarios Autorizados por URL (T-38)
+                  <h3 className="text-base font-bold text-ink">
+                    Usuarios Autorizados por URL
                   </h3>
-                  <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
+                  <div className="flex items-center gap-2 text-xs font-mono text-ink-secondary">
                     <span>{domainName}</span>
                     <span>•</span>
                     <span className="text-indigo-300 font-bold">{activeAuthUrl.pattern}</span>
@@ -1433,37 +1444,37 @@ export default function DomainUrlsPage() {
               <button
                 type="button"
                 onClick={() => setIsUsersModalOpen(false)}
-                className="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-slate-800 transition-colors"
+                className="text-ink-secondary hover:text-ink p-1 rounded-lg hover:bg-surface-subtle transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
             <div className="p-3.5 rounded-xl bg-purple-950/40 border border-purple-900/60 text-xs text-purple-200/90 leading-relaxed">
-              Los usuarios configurados en esta URL son independientes de las personas administradoras de la plataforma (docs/modelo-datos.md sección 3.4). Las contraseñas se almacenan mediante hash seguro (bcrypt) y otorgan acceso a través de la cookie de sesión <code className="text-purple-300 font-mono">zc_session</code>.
+              Los usuarios configurados en esta URL son independientes de las personas administradoras de la plataforma (especificaciones sección 3.4). Las contraseñas se almacenan mediante hash seguro (bcrypt) y otorgan acceso a través de la cookie de sesión <code className="text-purple-300 font-mono">zc_session</code>.
             </div>
 
             {/* Formulario para registrar un nuevo usuario */}
-            <form onSubmit={handleCreateUrlUser} className="p-4 rounded-2xl bg-slate-900/60 border border-slate-800 space-y-3">
-              <span className="block text-xs font-bold text-slate-200 uppercase tracking-wider">
+            <form onSubmit={handleCreateUrlUser} className="p-4 rounded-2xl bg-white/60 border border-surface-border space-y-3">
+              <span className="block text-xs font-bold text-ink font-medium uppercase tracking-wider">
                 Registrar Usuario para esta URL
               </span>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">Nombre de Usuario:</label>
+                  <label className="block text-[10px] font-semibold text-ink-secondary mb-1">Nombre de Usuario:</label>
                   <input
                     type="text"
                     placeholder="ej. ana, operador_qa"
                     value={newUsername}
                     onChange={(e) => setNewUsername(e.target.value)}
                     disabled={isCreatingUser}
-                    className="w-full px-3 py-2 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 font-mono"
+                    className="w-full px-3 py-2 rounded-xl bg-white border border-surface-border text-xs text-ink placeholder-ink-muted focus:outline-none focus:border-purple-500 font-mono"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-semibold text-slate-400 mb-1">Contraseña Inicial:</label>
+                  <label className="block text-[10px] font-semibold text-ink-secondary mb-1">Contraseña Inicial:</label>
                   <div className="relative">
                     <input
                       type={showNewUserPassword ? 'text' : 'password'}
@@ -1471,12 +1482,12 @@ export default function DomainUrlsPage() {
                       value={newUserPassword}
                       onChange={(e) => setNewUserPassword(e.target.value)}
                       disabled={isCreatingUser}
-                      className="w-full px-3 py-2 pr-9 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500 font-mono"
+                      className="w-full px-3 py-2 pr-9 rounded-xl bg-white border border-surface-border text-xs text-ink placeholder-ink-muted focus:outline-none focus:border-purple-500 font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => setShowNewUserPassword(!showNewUserPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink-secondary"
                     >
                       {showNewUserPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
@@ -1514,7 +1525,7 @@ export default function DomainUrlsPage() {
                   <button
                     type="button"
                     onClick={() => setUserToChangePass(null)}
-                    className="text-slate-400 hover:text-white"
+                    className="text-ink-secondary hover:text-ink"
                   >
                     <X className="w-4 h-4" />
                   </button>
@@ -1528,12 +1539,12 @@ export default function DomainUrlsPage() {
                       value={newPasswordInput}
                       onChange={(e) => setNewPasswordInput(e.target.value)}
                       disabled={isUpdatingPassword}
-                      className="w-full px-3 py-2 pr-9 rounded-xl bg-slate-950 border border-slate-800 text-xs text-slate-100 placeholder-slate-500 focus:outline-none focus:border-indigo-500 font-mono"
+                      className="w-full px-3 py-2 pr-9 rounded-xl bg-white border border-surface-border text-xs text-ink placeholder-ink-muted focus:outline-none focus:border-indigo-500 font-mono"
                     />
                     <button
                       type="button"
                       onClick={() => setShowChangePass(!showChangePass)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-ink-muted hover:text-ink-secondary"
                     >
                       {showChangePass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                     </button>
@@ -1542,7 +1553,7 @@ export default function DomainUrlsPage() {
                   <button
                     type="submit"
                     disabled={isUpdatingPassword || !newPasswordInput}
-                    className="px-4 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
+                    className="px-4 py-2 rounded-xl bg-forest hover:bg-forest-hover text-white shadow-subtle text-xs font-semibold transition-all cursor-pointer disabled:opacity-50"
                   >
                     {isUpdatingPassword ? 'Actualizando...' : 'Actualizar'}
                   </button>
@@ -1559,13 +1570,13 @@ export default function DomainUrlsPage() {
 
             {/* Lista de Usuarios autorizados existentes */}
             <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs text-slate-400">
+              <div className="flex items-center justify-between text-xs text-ink-secondary">
                 <span>Usuarios con credencial activa:</span>
                 <span className="font-mono">{urlUsers.length} usuarios</span>
               </div>
 
               {loadingUsers ? (
-                <div className="p-8 text-center glass-panel rounded-2xl border border-slate-800 text-slate-400 text-xs">
+                <div className="p-8 text-center bg-surface shadow-card rounded-2xl border border-surface-border text-ink-secondary text-xs">
                   Cargando usuarios...
                 </div>
               ) : usersError ? (
@@ -1577,18 +1588,18 @@ export default function DomainUrlsPage() {
                   <p>{usersError}</p>
                 </div>
               ) : urlUsers.length === 0 ? (
-                <div className="p-6 text-center rounded-2xl bg-slate-950/40 border border-slate-900 text-slate-500 text-xs">
+                <div className="p-6 text-center rounded-2xl bg-white/40 border border-slate-900 text-ink-muted text-xs">
                   No hay usuarios registrados para esta URL.
                 </div>
               ) : (
-                <div className="divide-y divide-slate-800/80 rounded-2xl bg-slate-950/60 border border-slate-800 overflow-hidden">
+                <div className="divide-y divide-slate-800/80 rounded-2xl bg-white/60 border border-surface-border overflow-hidden">
                   {urlUsers.map((u) => (
                     <div key={u.username} className="p-3 flex items-center justify-between gap-3 text-xs">
                       <div className="space-y-0.5">
                         <span className="font-bold font-mono text-purple-300 text-sm">
                           {u.username}
                         </span>
-                        <div className="text-[10px] text-slate-500 font-mono">
+                        <div className="text-[10px] text-ink-muted font-mono">
                           Creado: {new Date(u.createdAt || Date.now()).toLocaleDateString()}
                         </div>
                       </div>
@@ -1601,14 +1612,14 @@ export default function DomainUrlsPage() {
                             setNewPasswordInput('');
                             setChangePassError(null);
                           }}
-                          className="px-2.5 py-1 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-300 text-[11px] font-medium border border-slate-700 transition-colors cursor-pointer"
+                          className="px-2.5 py-1 rounded-lg bg-surface-subtle/80 hover:bg-surface-subtle text-ink-secondary text-[11px] font-medium border border-surface-border transition-colors cursor-pointer"
                         >
                           Cambiar Contraseña
                         </button>
                         <button
                           type="button"
                           onClick={() => setUserToDelete(u)}
-                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-400 hover:bg-rose-950/30 transition-colors cursor-pointer"
+                          className="p-1.5 rounded-lg text-ink-secondary hover:text-rose-400 hover:bg-rose-950/30 transition-colors cursor-pointer"
                           title="Eliminar usuario"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -1629,7 +1640,7 @@ export default function DomainUrlsPage() {
                     type="button"
                     onClick={() => setUserToDelete(null)}
                     disabled={isDeletingUser}
-                    className="px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold cursor-pointer"
+                    className="px-3 py-1.5 rounded-lg bg-surface-subtle hover:bg-surface-subtle text-ink-secondary text-xs font-semibold cursor-pointer"
                   >
                     Cancelar
                   </button>
@@ -1645,11 +1656,11 @@ export default function DomainUrlsPage() {
               </div>
             )}
 
-            <div className="pt-2 flex justify-end border-t border-slate-800">
+            <div className="pt-2 flex justify-end border-t border-surface-border">
               <button
                 type="button"
                 onClick={() => setIsUsersModalOpen(false)}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-surface-subtle hover:bg-surface-subtle text-ink-secondary text-xs font-semibold transition-all cursor-pointer"
               >
                 Cerrar
               </button>
@@ -1660,19 +1671,19 @@ export default function DomainUrlsPage() {
       )}
 
       {/* =========================================================================
-       * Modal de Confirmación para Eliminar URL (T-36)
+       * Modal de Confirmación para Eliminar URL
        * ========================================================================= */}
       {urlToDelete && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-md p-6 rounded-3xl glass-panel border border-rose-900/60 bg-surface-dark space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-ink/30 animate-fadeIn">
+          <div className="w-full max-w-md p-6 rounded-3xl bg-surface shadow-card border border-rose-900/60 bg-surface space-y-4 shadow-2xl">
             <div className="w-12 h-12 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-400 flex items-center justify-center">
               <AlertTriangle className="w-6 h-6" />
             </div>
 
             <div className="space-y-1.5">
-              <h3 className="text-lg font-bold text-white">¿Eliminar esta URL?</h3>
-              <p className="text-xs sm:text-sm text-slate-300 leading-relaxed">
-                Esta acción eliminará el patrón <strong className="text-white font-mono">{urlToDelete.pattern}</strong> del dominio <strong className="text-white font-mono">{domainName}</strong>. Las peticiones a esta ruta ya no serán cacheadas por la caché zonal.
+              <h3 className="text-lg font-bold text-ink">¿Eliminar esta URL?</h3>
+              <p className="text-xs sm:text-sm text-ink-secondary leading-relaxed">
+                Esta acción eliminará el patrón <strong className="text-ink font-mono">{urlToDelete.pattern}</strong> del dominio <strong className="text-ink font-mono">{domainName}</strong>. Las peticiones a esta ruta ya no serán cacheadas por la caché zonal.
               </p>
             </div>
 
@@ -1687,7 +1698,7 @@ export default function DomainUrlsPage() {
                 type="button"
                 onClick={() => setUrlToDelete(null)}
                 disabled={isDeleting}
-                className="px-4 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all cursor-pointer"
+                className="px-4 py-2 rounded-xl bg-surface-subtle hover:bg-surface-subtle text-ink-secondary text-xs font-semibold transition-all cursor-pointer"
               >
                 Cancelar
               </button>

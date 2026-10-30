@@ -2,22 +2,22 @@ import React from 'react';
 
 export default function StatusBadge({ label, status = 'success', pulse = false }) {
   const statusStyles = {
-    success: 'bg-emerald-950/60 text-emerald-300 border-emerald-800/80',
-    warning: 'bg-amber-950/60 text-amber-300 border-amber-800/80',
-    info: 'bg-indigo-950/60 text-indigo-300 border-indigo-800/80',
-    neutral: 'bg-slate-900/60 text-slate-300 border-slate-700/80',
-  }[status] || 'bg-slate-900/60 text-slate-300 border-slate-700/80';
+    success: 'bg-forest-subtle text-forest border-forest-border',
+    warning: 'bg-amberState-subtle text-amberState border-amberState-border',
+    info: 'bg-surface-subtle text-ink-secondary border-surface-border',
+    neutral: 'bg-surface-subtle text-ink-muted border-surface-border',
+  }[status] || 'bg-surface-subtle text-ink-secondary border-surface-border';
 
   const dotColor = {
-    success: 'bg-emerald-400',
-    warning: 'bg-amber-400',
-    info: 'bg-indigo-400',
-    neutral: 'bg-slate-400',
-  }[status] || 'bg-slate-400';
+    success: 'bg-forest',
+    warning: 'bg-amberState',
+    info: 'bg-ink-muted',
+    neutral: 'bg-ink-faint',
+  }[status] || 'bg-ink-muted';
 
   return (
-    <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium border backdrop-blur-sm ${statusStyles}`}>
-      <span className={`w-1.5 h-1.5 rounded-full ${dotColor} ${pulse ? 'animate-pulse' : ''}`} />
+    <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-xs font-medium border ${statusStyles}`}>
+      <span className={`w-1.5 h-1.5 rounded-full ${dotColor}`} />
       <span>{label}</span>
     </span>
   );
