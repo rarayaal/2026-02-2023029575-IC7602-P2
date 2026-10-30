@@ -33,5 +33,11 @@ test-t10: $(TEST_T10_BINARY)
 test: $(TEST_BINARY) test-t10
 	./$(TEST_BINARY)
 
+check: clean test
+
+asan:
+	$(MAKE) clean
+	$(MAKE) CFLAGS="$(CFLAGS) -g -O1 -fsanitize=address,undefined -fno-omit-frame-pointer" test
+
 clean:
 	rm -rf build
