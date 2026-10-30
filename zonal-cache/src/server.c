@@ -45,8 +45,85 @@ static int get_default_origin_port(void) {
     return 80;
 }
 
-// Función para solicitar un recurso al servidor de origen (T-12)
-int fetch_from_origin(const char *host, int origin_port, const char *path, char *response_buffer, size_t max_len) {
+#include <curl/curl.h>
+
+typedef struct {
+    char *data;
+    size_t size;
+    size_t capacity;
+} CurlMemoryBuffer;
+
+static size_t server_curl_write_cb(void *contents, size_t size, size_t nmemb, void *userp) {
+    size_t real_size = size * nmemb;
+    CurlMemoryBuffer *mem = (CurlMemoryBuffer *)userp;
+
+    if (mem->size + real_size >= mem->capacity) {
+        size_t new_cap = mem->capacity + real_size + 4096;
+        char *ptr = realloc(mem->data, new_cap);
+        if (!ptr) return 0;
+        mem->data = ptr;
+        mem->capacity = new_cap;
+    }
+
+    memcpy(&(mem->data[mem->size]), contents, real_size);
+    mem->size += real_size;
+    mem->data[mem->size] = 0;
+    return real_size;
+}
+
+// Función para solicitar un recurso al servidor de origen (T-12) con soporte HTTP y HTTPS
+int fetch_from_origin(const char *scheme, const char *host, int origin_port, const char *path, char *response_buffer, size_t max_len) {
+    if (scheme && strcasecmp(scheme, "https") == 0) {
+        CURL *curl = curl_easy_init();
+        if (!curl) return -1;
+
+        char url[1024];
+        if (origin_port == 443 || origin_port <= 0) {
+            snprintf(url, sizeof(url), "https://%s%s", host, path);
+        } else {
+            snprintf(url, sizeof(url), "https://%s:%d%s", host, origin_port, path);
+        }
+
+        CurlMemoryBuffer header_buf = { .data = malloc(4096), .size = 0, .capacity = 4096 };
+        CurlMemoryBuffer body_buf = { .data = malloc(8192), .size = 0, .capacity = 8192 };
+        if (!header_buf.data || !body_buf.data) {
+            free(header_buf.data);
+            free(body_buf.data);
+            curl_easy_cleanup(curl);
+            return -1;
+        }
+        header_buf.data[0] = 0;
+        body_buf.data[0] = 0;
+
+        curl_easy_setopt(curl, CURLOPT_URL, url);
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, server_curl_write_cb);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, (void *)&body_buf);
+        curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, server_curl_write_cb);
+        curl_easy_setopt(curl, CURLOPT_HEADERDATA, (void *)&header_buf);
+
+        curl_easy_setopt(curl, CURLOPT_USERAGENT, "ZonalCache/1.0");
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+
+        CURLcode res = curl_easy_perform(curl);
+        int total = -1;
+        if (res == CURLE_OK) {
+            size_t combined = header_buf.size + body_buf.size;
+            if (combined < max_len) {
+                memcpy(response_buffer, header_buf.data, header_buf.size);
+                memcpy(response_buffer + header_buf.size, body_buf.data, body_buf.size);
+                response_buffer[combined] = '\0';
+                total = (int)combined;
+            }
+        }
+
+        free(header_buf.data);
+        free(body_buf.data);
+        curl_easy_cleanup(curl);
+        return total;
+    }
+
+    // Modo HTTP plano vía TCP socket directo
     int origin_fd;
     struct sockaddr_in origin_addr;
     struct hostent *server;
@@ -63,7 +140,7 @@ int fetch_from_origin(const char *host, int origin_port, const char *path, char 
     memset(&origin_addr, 0, sizeof(origin_addr));
     origin_addr.sin_family = AF_INET;
     bcopy((char *)server->h_addr, (char *)&origin_addr.sin_addr.s_addr, server->h_length);
-    origin_addr.sin_port = htons(origin_port);
+    origin_addr.sin_port = htons(origin_port > 0 ? origin_port : 80);
 
     if (connect(origin_fd, (struct sockaddr *)&origin_addr, sizeof(origin_addr)) < 0) {
         close(origin_fd);
@@ -92,6 +169,7 @@ int fetch_from_origin(const char *host, int origin_port, const char *path, char 
     return total_bytes;
 }
 
+
 static const char *get_auth_ui_url(void) {
     const char *env = getenv("AUTH_UI_URL");
     return (env && strlen(env) > 0) ? env : "http://localhost:5173/login";
@@ -117,21 +195,30 @@ int extract_query_param(const char *query, const char *param_name, char *out, si
 }
 
 // Valida si la sesión es válida (T-15)
-int is_valid_session(const char *session_token) {
+int is_valid_session(const char *domain, const char *url_id, const char *session_token) {
     if (!session_token || strlen(session_token) == 0) return 0;
-    // La sesión es válida si no está vacía; en producción/integración consulta POST /api/internal/validate/session
+    // Si hay un API configurado, valida remotamente contra Firestore
+    const char *api_url = getenv("CONFIG_API_URL");
+    if (api_url && strlen(api_url) > 0) {
+        return validate_session_remote(domain, url_id, session_token);
+    }
     return 1;
 }
 
 // Valida si la API Key es válida (T-13)
-int is_valid_api_key(const char *api_key) {
+int is_valid_api_key(const char *domain, const char *url_id, const char *api_key) {
     if (!api_key || strlen(api_key) == 0) return 0;
+    const char *api_url = getenv("CONFIG_API_URL");
+    if (api_url && strlen(api_url) > 0) {
+        return validate_api_key_remote(domain, url_id, api_key);
+    }
     const char *expected_key = getenv("EXPECTED_API_KEY");
     if (expected_key && strlen(expected_key) > 0) {
         return (strcmp(api_key, expected_key) == 0);
     }
     return 1;
 }
+
 
 void *handle_client(void *client_socket_ptr) {
     int client_fd = *(int *)client_socket_ptr;
@@ -168,7 +255,7 @@ void *handle_client(void *client_socket_ptr) {
                 snprintf(redirect, sizeof(redirect), "/");
             }
 
-            if (strlen(token) > 0 && is_valid_session(token)) {
+            if (strlen(token) > 0 && is_valid_session(effective_domain, "u_session", token)) {
                 char response[BUFFER_SIZE];
                 snprintf(response, sizeof(response),
                          "HTTP/1.1 302 Found\r\n"
@@ -199,34 +286,36 @@ void *handle_client(void *client_socket_ptr) {
         const DomainURLConfig *matched_url = find_matching_url_config(&domain_cfg, req.path);
 
         const char *auth_mode = "none";
+        const char *url_id = "u1";
         if (matched_url) {
             auth_mode = matched_url->auth_type;
+            url_id = matched_url->id;
         }
 
         if (strcmp(auth_mode, "api_key") == 0) {
             // Validación por x-api-key (T-13)
-            if (!is_valid_api_key(req.api_key)) {
+            if (!is_valid_api_key(effective_domain, url_id, req.api_key)) {
                 const char *unauthorized = 
                     "HTTP/1.1 401 Unauthorized\r\n"
                     "Content-Type: text/plain\r\n"
                     "Content-Length: 26\r\n"
                     "Connection: close\r\n\r\n"
-                    "Error: x-api-key requerida\n";
+                    "Error: x-api-key requerida o invalida\n";
                 write(client_fd, unauthorized, strlen(unauthorized));
                 close(client_fd);
                 return NULL;
             }
         } else if (strcmp(auth_mode, "user_password") == 0) {
             // Validación por sesión / redirección a UI (T-14 y T-15)
-            if (strlen(req.cookie_session) == 0 || !is_valid_session(req.cookie_session)) {
+            if (strlen(req.cookie_session) == 0 || !is_valid_session(effective_domain, url_id, req.cookie_session)) {
                 const char *auth_ui = get_auth_ui_url();
                 char redirect_resp[BUFFER_SIZE];
                 snprintf(redirect_resp, sizeof(redirect_resp),
                          "HTTP/1.1 302 Found\r\n"
-                         "Location: %s?domain=%s&redirect=http://%s%s\r\n"
+                         "Location: %s?domain=%s&urlId=%s&redirect=http://%s%s\r\n"
                          "Content-Length: 0\r\n"
                          "Connection: close\r\n\r\n",
-                         auth_ui, effective_domain, effective_domain, req.path);
+                         auth_ui, effective_domain, url_id, effective_domain, req.path);
                 write(client_fd, redirect_resp, strlen(redirect_resp));
                 printf(" -> [T-14] Sin sesión activa. Redirigiendo a formulario UI de login: %s\n", auth_ui);
                 close(client_fd);
@@ -258,11 +347,12 @@ void *handle_client(void *client_socket_ptr) {
             // CACHE MISS: Obtener desde el origen y almacenar en caché (T-12)
             const char *origin_host = strlen(domain_cfg.origin_host) > 0 ? domain_cfg.origin_host : get_default_origin_host();
             int origin_port = domain_cfg.origin_port > 0 ? domain_cfg.origin_port : get_default_origin_port();
+            const char *origin_scheme = strlen(domain_cfg.origin_scheme) > 0 ? domain_cfg.origin_scheme : "http";
 
-
-            printf(" -> [CACHE MISS] Obteniendo desde el origen (%s:%d)...\n", origin_host, origin_port);
+            printf(" -> [CACHE MISS] Obteniendo desde el origen (%s://%s:%d)...\n", origin_scheme, origin_host, origin_port);
             char origin_response[BUFFER_SIZE] = {0};
-            int bytes_from_origin = fetch_from_origin(origin_host, origin_port, req.path, origin_response, sizeof(origin_response));
+            int bytes_from_origin = fetch_from_origin(origin_scheme, origin_host, origin_port, req.path, origin_response, sizeof(origin_response));
+
 
             if (bytes_from_origin > 0) {
                 // Servir respuesta al cliente

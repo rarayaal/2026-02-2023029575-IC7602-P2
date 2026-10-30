@@ -1,10 +1,11 @@
 CC ?= gcc
 CFLAGS ?= -std=c11 -Wall -Wextra -Wpedantic -Iinclude
-LDFLAGS ?= -pthread
+LDFLAGS ?= -pthread -lcurl
 
 TEST_BINARY := build/test_cache
 TEST_T10_BINARY := build/test_t10
 SERVER_BINARY := build/zonal_cache_server
+
 
 .PHONY: all server test test-t10 clean
 

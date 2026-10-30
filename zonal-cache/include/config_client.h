@@ -37,4 +37,11 @@ int fetch_domain_config(const char *domain, DomainConfig *config_out);
 /* Busca la regla de URL que hace match con el path solicitado */
 const DomainURLConfig *find_matching_url_config(const DomainConfig *config, const char *path);
 
+/* Valida una API key contra el API en Node.js (POST /api/internal/validate/api-key) */
+int validate_api_key_remote(const char *domain, const char *url_id, const char *api_key);
+
+/* Valida una sesión contra el API en Node.js (POST /api/internal/validate/session) */
+int validate_session_remote(const char *domain, const char *url_id, const char *session_token);
+
 #endif
+
