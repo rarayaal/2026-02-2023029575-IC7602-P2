@@ -1,0 +1,6 @@
+apiVersion: v2
+name: mock-origin
+description: Servidor de origen simulado (Nginx) para resolución de cache misses en el stack
+type: application
+version: 0.1.0
+appVersion: "1.25-alpine"

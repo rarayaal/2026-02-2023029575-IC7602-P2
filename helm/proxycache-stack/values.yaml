@@ -4,6 +4,9 @@
 global:
   environment: production
   domain: app.local
+  # SEGURIDAD: Inyectar mediante --set global.internalServiceToken=$INTERNAL_SERVICE_TOKEN
+  # Este secreto compartido autentica la comunicación entre zonal-cache, dns-interceptor y node-api.
+  internalServiceToken: ""
 
 dns-interceptor:
   replicaCount: 1
@@ -17,6 +20,9 @@ dns-interceptor:
     interceptorUdpPort: "53"
     upstreamDnsIp: "8.8.8.8"
     upstreamDnsPort: "53"
+    # NOTA TECNICA (T-40): Las IPs 10.0.x.x son placeholders. dns.c exige una direccion IPv4
+    # literal (inet_pton). Tras el primer despliegue, deploy.sh / deploy.ps1 obtienen el ClusterIP real
+    # del Service de la cache y ejecutan un segundo upgrade con --set dns-interceptor.env.zonalCache*="$CACHE_IP".
     zonalCacheCr: "10.0.1.10"
     zonalCacheUs: "10.0.2.10"
     zonalCacheDefault: "10.0.0.10"
@@ -44,12 +50,22 @@ zonal-cache:
     ORIGIN_PORT: "80"
     AUTH_MODE: "user_password"
     # NOTA TECNICA (T-39/T-40): AUTH_UI_URL es la URL a la que el navegador del usuario es redirigido (302).
-    # No puede ser un hostname interno de Kubernetes (proxycache-ui) porque el navegador no lo resuelve.
-    # Por defecto usa localhost:5173 para port-forwarding/pruebas locales, o el Ingress/FQDN publico en produccion.
-    AUTH_UI_URL: "http://localhost:5173/cache-login"
+    # No puede ser un hostname interno de Kubernetes (proxycache-ui) porque el navegador del cliente no lo resuelve.
+    # Coherencia con el API:
+    #   - Caso 1 (Port-forwarding local):
+    #       UI:           kubectl port-forward svc/proxycache-ui 5173:80   -> http://localhost:5173
+    #       API:          kubectl port-forward svc/proxycache-node-api 3000:3000 -> http://localhost:3000/api
+    #       AUTH_UI_URL:  "http://localhost:5173/cache-login"
+    #       CORS_ORIGINS: "http://localhost:5173,http://localhost,http://127.0.0.1:5173"
+    #   - Caso 2 (Ingress / Produccion):
+    #       UI:           http://ui.local (o FQDN público)
+    #       API:          http://api.local/api (o FQDN público)
+    #       AUTH_UI_URL:  "http://ui.local/cache-login"
+    #       CORS_ORIGINS: "http://ui.local,http://cache.local"
+    AUTH_UI_URL: "http://ui.local/cache-login"
     CONFIG_API_URL: "http://proxycache-node-api:3000"
     # SEGURIDAD: CONFIG_API_TOKEN debe coincidir con INTERNAL_SERVICE_TOKEN y cambiarse en produccion
-    CONFIG_API_TOKEN: "internal-secret-token-ic7602"
+    CONFIG_API_TOKEN: ""
     EXPECTED_API_KEY: ""
 
 node-api:
@@ -63,15 +79,32 @@ node-api:
     PORT: "3000"
     NODE_ENV: "production"
     # SEGURIDAD: En produccion restringir CORS exclusivamente al dominio publico de la UI
-    CORS_ORIGINS: "http://localhost:5173,http://cache.local,http://proxycache-ui"
+    CORS_ORIGINS: "http://ui.local,http://localhost:5173,http://localhost,http://127.0.0.1:5173,http://cache.local,http://proxycache-ui"
     # SEGURIDAD: Reemplazar por un secreto de alta entropia en produccion
-    INTERNAL_SERVICE_TOKEN: "internal-secret-token-ic7602"
+    INTERNAL_SERVICE_TOKEN: ""
     SESSION_TTL_SECONDS: "3600"
+    FIREBASE_PROJECT_ID: ""
+    FIREBASE_CLIENT_EMAIL: ""
+    FIREBASE_PRIVATE_KEY: ""
 
 ui:
+  ingress:
+    enabled: true
+    className: "nginx"
+    hosts:
+      - host: ui.local
+        paths:
+          - path: /
+            pathType: Prefix
+
+# ==============================================================================
+# Servidores de origen adicionales para pruebas de extremo a extremo (T-22 a T-24, T-40)
+# ==============================================================================
+mock-origin:
   replicaCount: 1
-  image:
-    repository: zonal-cache-ui
-    tag: latest
-  service:
-    port: 80
+
+apache-server:
+  replicaCount: 1
+
+rest-api-java:
+  replicaCount: 1
