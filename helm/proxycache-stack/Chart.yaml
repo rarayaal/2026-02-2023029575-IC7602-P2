@@ -18,3 +18,12 @@ dependencies:
   - name: ui
     version: 0.1.0
     repository: "file://../ui"
+  - name: mock-origin
+    version: 0.1.0
+    repository: "file://../mock-origin"
+  - name: apache-server
+    version: 0.1.0
+    repository: "file://../apache-server"
+  - name: rest-api-java
+    version: 0.1.0
+    repository: "file://../rest-api-java"

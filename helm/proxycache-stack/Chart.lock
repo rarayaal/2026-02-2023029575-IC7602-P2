@@ -11,5 +11,14 @@ dependencies:
 - name: ui
   repository: file://../ui
   version: 0.1.0
-digest: sha256:876d056adb4e402ae7c728b29886acea84450a50d02822ee8d1ee47c6fdf9a22
-generated: "2026-10-25T19:55:31.6974946-06:00"
+- name: mock-origin
+  repository: file://../mock-origin
+  version: 0.1.0
+- name: apache-server
+  repository: file://../apache-server
+  version: 0.1.0
+- name: rest-api-java
+  repository: file://../rest-api-java
+  version: 0.1.0
+digest: sha256:22ade67c37743eabdd9d0e445cc487988200a2b8872450ff7ba2740dafc4fd65
+generated: "2026-11-01T18:47:52.149467-06:00"

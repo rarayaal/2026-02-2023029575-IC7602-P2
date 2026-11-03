@@ -10,9 +10,15 @@ bin/
 
 # Variables de entorno y credenciales (SOLO .env.example se versiona)
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 *.secret
+
+# Llaves de cuenta de servicio de Firebase Admin SDK / Google Cloud
+# REGLA OBLIGATORIA: Guardar el archivo JSON de credenciales SIEMPRE FUERA de la carpeta del proyecto.
+# Estos patrones evitan que se incluya accidentalmente en Git si alguien lo copia localmente.
+*adminsdk*.json
+serviceAccount*.json
 
 # Despliegue Vercel
 .vercel/
@@ -41,4 +47,7 @@ Desktop.ini
 *.swp
 *~
 .vercel
-.env*
+
+# Paquetes de dependencias de Helm (Chart.lock se mantiene versionado)
+helm/**/charts/*.tgz
+

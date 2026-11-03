@@ -4,6 +4,7 @@ services:
   # ==========================================
   ui:
     container_name: zonal-cache-ui
+    image: zonal-cache-ui:latest
     build:
       context: .
       dockerfile: Dockerfile
@@ -11,7 +12,6 @@ services:
         VITE_API_BASE_URL: ${VITE_API_BASE_URL:-http://localhost:3000/api}
         VITE_APP_TITLE: ${VITE_APP_TITLE:-Proxy/Caché de Aplicación con Geolocalización}
         VITE_APP_ENV: ${VITE_APP_ENV:-production}
-        UI_PORT: ${UI_PORT:-5173}
         VITE_FIREBASE_API_KEY: ${VITE_FIREBASE_API_KEY:-}
         VITE_FIREBASE_AUTH_DOMAIN: ${VITE_FIREBASE_AUTH_DOMAIN:-}
         VITE_FIREBASE_PROJECT_ID: ${VITE_FIREBASE_PROJECT_ID:-}
@@ -40,6 +40,7 @@ services:
   # ==========================================
   api:
     container_name: zonal-cache-api
+    image: node-api:latest
     build:
       context: ./node-api
       dockerfile: Dockerfile
@@ -50,13 +51,13 @@ services:
       - NODE_ENV=${NODE_ENV:-production}
       # SEGURIDAD: En produccion restringir CORS exclusivamente al dominio de la UI en Vercel
       - CORS_ORIGINS=${CORS_ORIGINS:-http://localhost:5173,http://localhost,http://127.0.0.1:5173}
-      # SEGURIDAD: Reemplazar INTERNAL_SERVICE_TOKEN por un secreto criptografico de alta entropia en produccion
-      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:-internal-secret-token-ic7602}
+      # SEGURIDAD: INTERNAL_SERVICE_TOKEN obligatorio de alta entropia sin valor por defecto
+      - INTERNAL_SERVICE_TOKEN=${INTERNAL_SERVICE_TOKEN:?INTERNAL_SERVICE_TOKEN es obligatorio y debe ser un secreto de alta entropia}
       - SESSION_TTL_SECONDS=${SESSION_TTL_SECONDS:-3600}
-      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:-}
-      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL:-}
-      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY:-}
-      - FIREBASE_WEB_API_KEY=${FIREBASE_WEB_API_KEY:-}
+      - BCRYPT_ROUNDS=${BCRYPT_ROUNDS:-10}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID:?FIREBASE_PROJECT_ID es obligatorio}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL:?FIREBASE_CLIENT_EMAIL es obligatorio}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY:?FIREBASE_PRIVATE_KEY es obligatorio}
     restart: unless-stopped
     networks:
       - proxycache-net
@@ -72,9 +73,10 @@ services:
   # ==========================================
   zonal-cache:
     container_name: zonal-cache-server
+    image: zonal-cache:latest
     build:
-      context: ./zonal-cache
-      dockerfile: Dockerfile
+      context: .
+      dockerfile: zonal-cache/Dockerfile
     ports:
       - "${CACHE_PORT:-8080}:8080"
     environment:
@@ -83,9 +85,12 @@ services:
       - ORIGIN_HOST=${ORIGIN_HOST:-origin}
       - ORIGIN_PORT=${ORIGIN_PORT:-80}
       - AUTH_UI_URL=${AUTH_UI_URL:-http://localhost:5173/cache-login}
+      # NOTA TECNICA (T-40): CONFIG_API_URL, CONFIG_API_TOKEN y CONFIG_REFRESH_SECONDS se definen
+      # para cumplir el contrato de integracion con node-api, aunque actualmente config_client.c
+      # en C no invoca getenv() para consumirlos en tiempo de ejecucion.
       - CONFIG_API_URL=${CONFIG_API_URL:-http://api:3000}
-      # SEGURIDAD: Debe coincidir exactamente con INTERNAL_SERVICE_TOKEN del API
-      - CONFIG_API_TOKEN=${CONFIG_API_TOKEN:-internal-secret-token-ic7602}
+      # SEGURIDAD: CONFIG_API_TOKEN debe coincidir exactamente con INTERNAL_SERVICE_TOKEN del API
+      - CONFIG_API_TOKEN=${CONFIG_API_TOKEN:?CONFIG_API_TOKEN es obligatorio y debe coincidir con INTERNAL_SERVICE_TOKEN}
       - CONFIG_REFRESH_SECONDS=${CONFIG_REFRESH_SECONDS:-30}
       - EXPECTED_API_KEY=${EXPECTED_API_KEY:-}
     volumes:
@@ -105,6 +110,7 @@ services:
   # ==========================================
   dns-interceptor:
     container_name: zonal-dns-interceptor
+    image: dns-interceptor:latest
     build:
       context: ./dns-interceptor
       dockerfile: Dockerfile
@@ -136,6 +142,39 @@ services:
     image: nginx:alpine
     ports:
       - "${ORIGIN_EXPOSE_PORT:-8081}:80"
+    restart: unless-stopped
+    networks:
+      - proxycache-net
+
+  # ==========================================
+  # 6. Apache Server - Origen de prueba estático (T-24, T-40)
+  # ==========================================
+  apache-server:
+    container_name: zonal-origin-apache
+    image: apache-server:latest
+    build:
+      context: ./apache-server
+      dockerfile: Dockerfile
+    ports:
+      - "${APACHE_PORT:-8083}:80"
+    restart: unless-stopped
+    networks:
+      - proxycache-net
+
+  # ==========================================
+  # 7. REST API Java - Origen de prueba dinámico (T-22, T-23, T-40)
+  # ==========================================
+  rest-api-java:
+    container_name: zonal-origin-java
+    image: rest-api-java:latest
+    build:
+      context: ./rest-api-java
+      dockerfile: Dockerfile
+    ports:
+      - "${JAVA_API_PORT:-8082}:8080"
+    environment:
+      - REST_API_HOST=0.0.0.0
+      - REST_API_PORT=8080
     restart: unless-stopped
     networks:
       - proxycache-net
