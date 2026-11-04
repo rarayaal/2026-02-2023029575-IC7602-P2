@@ -1,5 +1,5 @@
 # Multi-stage build para Zonal Cache en GNU C
-FROM gcc:12-bullseye AS builder
+FROM gcc:12-bookworm AS builder
 
 WORKDIR /app
 
@@ -11,10 +11,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 COPY . .
 
-RUN make -C zonal-cache server
+RUN if [ -d "zonal-cache" ]; then \
+        make -C zonal-cache server && cp zonal-cache/build/zonal_cache_server /app/zonal_cache_server; \
+    else \
+        make server && cp build/zonal_cache_server /app/zonal_cache_server; \
+    fi
 
 # Etapa 2: Imagen final liviana
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
 
 WORKDIR /app
 
@@ -23,7 +27,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
-COPY --from=builder /app/zonal-cache/build/zonal_cache_server /app/zonal_cache_server
+COPY --from=builder /app/zonal_cache_server /app/zonal_cache_server
 
 # Variables de entorno por defecto (inyectables en Kubernetes)
 ENV PORT=8080

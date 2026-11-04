@@ -72,6 +72,118 @@ static int parse_json_int(const char *json, const char *key, int *out) {
     return 1;
 }
 
+// Extrae un tamaño (size_t) tipo "cacheSizeBytes":10485760 del JSON
+static int parse_json_size_t(const char *json, const char *key, size_t *out) {
+    if (!json || !key || !out) return 0;
+    char needle[64];
+    snprintf(needle, sizeof(needle), "\"%s\"", key);
+    const char *pos = strstr(json, needle);
+    if (!pos) return 0;
+    pos += strlen(needle);
+    while (*pos == ' ' || *pos == ':') pos++;
+    *out = (size_t)strtoull(pos, NULL, 10);
+    return 1;
+}
+
+// Parsea el arreglo "urls" del JSON retornado por el API
+static void parse_urls_array(const char *json, DomainConfig *config_out) {
+    const char *urls_start = strstr(json, "\"urls\"");
+    if (!urls_start) return;
+
+    urls_start = strchr(urls_start, '[');
+    if (!urls_start) return;
+
+    const char *curr = urls_start + 1;
+    config_out->url_count = 0;
+
+    while (*curr && *curr != ']' && config_out->url_count < MAX_CONFIG_URLS) {
+        const char *obj_start = strchr(curr, '{');
+        if (!obj_start) break;
+
+        // Avanzar balanceando llaves para delimitar el objeto de la URL completo
+        int depth = 0;
+        const char *p = obj_start;
+        const char *obj_end = NULL;
+        while (*p && (*p != ']' || depth > 0)) {
+            if (*p == '{') depth++;
+            else if (*p == '}') {
+                depth--;
+                if (depth == 0) {
+                    obj_end = p;
+                    break;
+                }
+            }
+            p++;
+        }
+        if (!obj_end) break;
+
+        size_t block_len = (size_t)(obj_end - obj_start + 1);
+        char *block = malloc(block_len + 1);
+        if (!block) break;
+        memcpy(block, obj_start, block_len);
+        block[block_len] = '\0';
+
+        DomainURLConfig *url_cfg = &config_out->urls[config_out->url_count];
+        memset(url_cfg, 0, sizeof(DomainURLConfig));
+
+        parse_json_string(block, "id", url_cfg->id, sizeof(url_cfg->id));
+        parse_json_string(block, "pattern", url_cfg->pattern, sizeof(url_cfg->pattern));
+        parse_json_size_t(block, "cacheSizeBytes", &url_cfg->cache_size_bytes);
+
+        // Extraer tipo de autenticación: "auth":{"type":"api_key"} o "none"
+        const char *auth_pos = strstr(block, "\"auth\"");
+        if (auth_pos) {
+            parse_json_string(auth_pos, "type", url_cfg->auth_type, sizeof(url_cfg->auth_type));
+        }
+        if (strlen(url_cfg->auth_type) == 0) {
+            strncpy(url_cfg->auth_type, "none", sizeof(url_cfg->auth_type) - 1);
+        }
+
+        // Parsear reglas de fileTypes
+        const char *ft_start = strstr(block, "\"fileTypes\"");
+        if (ft_start) {
+            const char *arr = strchr(ft_start, '[');
+            if (arr) {
+                const char *fcurr = arr + 1;
+                while (*fcurr && *fcurr != ']' && url_cfg->file_type_count < MAX_FILE_TYPES) {
+                    const char *f_obj = strchr(fcurr, '{');
+                    if (!f_obj || f_obj > strchr(arr, ']')) break;
+                    const char *f_end = strchr(f_obj, '}');
+                    if (!f_end) break;
+
+                    size_t flen = (size_t)(f_end - f_obj + 1);
+                    char *fblock = malloc(flen + 1);
+                    if (fblock) {
+                        memcpy(fblock, f_obj, flen);
+                        fblock[flen] = '\0';
+
+                        DomainFileTypeRule *rule = &url_cfg->file_types[url_cfg->file_type_count];
+                        parse_json_string(fblock, "extension", rule->extension, sizeof(rule->extension));
+                        parse_json_int(fblock, "ttlSeconds", &rule->ttl_seconds);
+                        parse_json_string(fblock, "policy", rule->policy, sizeof(rule->policy));
+
+                        url_cfg->file_type_count++;
+                        free(fblock);
+                    }
+                    fcurr = f_end + 1;
+                }
+            }
+        }
+
+        // Si no trajo fileTypes específicos, regla comodín por defecto
+        if (url_cfg->file_type_count == 0) {
+            url_cfg->file_type_count = 1;
+            strncpy(url_cfg->file_types[0].extension, "*", sizeof(url_cfg->file_types[0].extension) - 1);
+            url_cfg->file_types[0].ttl_seconds = 300;
+            strncpy(url_cfg->file_types[0].policy, "LRU", sizeof(url_cfg->file_types[0].policy) - 1);
+        }
+
+        config_out->url_count++;
+        free(block);
+        curr = obj_end + 1;
+    }
+}
+
 int fetch_domain_config(const char *domain, DomainConfig *config_out) {
     if (!config_out) return -1;
     memset(config_out, 0, sizeof(DomainConfig));
@@ -120,13 +232,21 @@ int fetch_domain_config(const char *domain, DomainConfig *config_out) {
                         strncpy(config_out->origin_scheme, strlen(scheme) > 0 ? scheme : "http", sizeof(config_out->origin_scheme) - 1);
                         strncpy(config_out->origin_host, host, sizeof(config_out->origin_host) - 1);
                         config_out->origin_port = port;
-                        config_out->cache_size_bytes = 100 * 1024 * 1024;
 
-                        // Regla comodín por defecto
-                        config_out->url_count = 1;
-                        strncpy(config_out->urls[0].id, "u1", sizeof(config_out->urls[0].id) - 1);
-                        strncpy(config_out->urls[0].pattern, "/*", sizeof(config_out->urls[0].pattern) - 1);
-                        strncpy(config_out->urls[0].auth_type, "none", sizeof(config_out->urls[0].auth_type) - 1);
+                        size_t cache_size = 100 * 1024 * 1024;
+                        parse_json_size_t(buf.data, "cacheSizeBytes", &cache_size);
+                        config_out->cache_size_bytes = cache_size;
+
+                        // Parsear dinámicamente el arreglo de URLs
+                        parse_urls_array(buf.data, config_out);
+
+                        // Si no venía ninguna URL en el JSON, fallback a comodín por defecto
+                        if (config_out->url_count == 0) {
+                            config_out->url_count = 1;
+                            strncpy(config_out->urls[0].id, "u1", sizeof(config_out->urls[0].id) - 1);
+                            strncpy(config_out->urls[0].pattern, "/*", sizeof(config_out->urls[0].pattern) - 1);
+                            strncpy(config_out->urls[0].auth_type, "none", sizeof(config_out->urls[0].auth_type) - 1);
+                        }
 
                         free(buf.data);
                         curl_slist_free_all(headers);
