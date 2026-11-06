@@ -215,4 +215,4 @@ service cloud.firestore {
 ```
 
 La autorización (quién puede modificar qué dominio) se aplica dentro del API. Ver
-[seguridad-api.md](seguridad-api.md) (T-32, pendiente).
+[seguridad-api.md](seguridad-api.md) (T-32).
