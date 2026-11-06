@@ -13,7 +13,7 @@ env:
   PORT: "3000"
   NODE_ENV: "production"
   CORS_ORIGINS: "http://localhost:5173,http://cache.local,http://proxycache-ui"
-  INTERNAL_SERVICE_TOKEN: "internal-secret-token-ic7602"
+  INTERNAL_SERVICE_TOKEN: ""
   SESSION_TTL_SECONDS: "3600"
   FIREBASE_PROJECT_ID: ""
   FIREBASE_CLIENT_EMAIL: ""
