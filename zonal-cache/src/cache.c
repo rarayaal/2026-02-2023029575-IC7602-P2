@@ -2,6 +2,7 @@
 
 #include <errno.h>
 #include <limits.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -418,15 +419,66 @@ cache_result_t cache_index_purge_expired(cache_index_t *index,
     return CACHE_OK;
 }
 
-static unsigned long hash_url(const char *url) {
-    unsigned long hash = 2166136261u;
+static uint64_t hash_url(const char *url) {
+    uint64_t hash = UINT64_C(14695981039346656037);
     const unsigned char *part = (const unsigned char *)url;
 
     while (*part != '\0') {
         hash ^= *part++;
-        hash *= 16777619u;
+        hash *= UINT64_C(1099511628211);
     }
     return hash;
+}
+
+static cache_result_t metadata_path(const char *content_path,
+                                    char *path_out,
+                                    size_t path_capacity) {
+    int written = snprintf(path_out, path_capacity, "%s.url", content_path);
+
+    if (written < 0 || (size_t)written >= path_capacity) {
+        return CACHE_BUFFER_TOO_SMALL;
+    }
+    return CACHE_OK;
+}
+
+static cache_result_t metadata_matches(const char *content_path,
+                                       const char *url) {
+    char metadata_file_path[PATH_MAX];
+    char stored_url[PATH_MAX];
+    FILE *metadata_file;
+    size_t length;
+    cache_result_t result;
+
+    result = metadata_path(content_path, metadata_file_path,
+                           sizeof(metadata_file_path));
+    if (result != CACHE_OK) {
+        return result;
+    }
+    metadata_file = fopen(metadata_file_path, "rb");
+    if (metadata_file == NULL) {
+        return errno == ENOENT ? CACHE_NOT_FOUND : CACHE_IO_ERROR;
+    }
+    if (fgets(stored_url, sizeof(stored_url), metadata_file) == NULL) {
+        fclose(metadata_file);
+        return CACHE_IO_ERROR;
+    }
+    fclose(metadata_file);
+    length = strlen(stored_url);
+    if (length > 0 && stored_url[length - 1] == '\n') {
+        stored_url[length - 1] = '\0';
+    }
+    return strcmp(stored_url, url) == 0 ? CACHE_OK : CACHE_HASH_COLLISION;
+}
+
+static cache_result_t validate_storage_slot(const char *content_path,
+                                            const char *url) {
+    cache_result_t result;
+
+    if (access(content_path, F_OK) != 0 && errno == ENOENT) {
+        return CACHE_OK;
+    }
+    result = metadata_matches(content_path, url);
+    return result == CACHE_NOT_FOUND ? CACHE_HASH_COLLISION : result;
 }
 
 static int valid_domain_path(const char *domain) {
@@ -513,8 +565,9 @@ cache_result_t cache_storage_path(const cache_storage_t *storage,
         !make_directories(domain_path)) {
         return CACHE_IO_ERROR;
     }
-    written = snprintf(path_out, path_capacity, "%s/%s/%08lx.cache",
-                       storage->root_path, domain, hash_url(url));
+    written = snprintf(path_out, path_capacity, "%s/%s/%016llx.cache",
+                       storage->root_path, domain,
+                       (unsigned long long)hash_url(url));
     if (written < 0 || (size_t)written >= path_capacity) {
         return CACHE_BUFFER_TOO_SMALL;
     }
@@ -528,10 +581,15 @@ cache_result_t cache_storage_write(const cache_storage_t *storage,
                                    size_t data_size) {
     char path[PATH_MAX];
     char temporary_path[PATH_MAX];
+    char metadata_file_path[PATH_MAX];
+    char temporary_metadata_path[PATH_MAX];
     FILE *file;
+    FILE *metadata_file;
+    int metadata_ok = 0;
     cache_result_t result;
 
-    if (data == NULL && data_size != 0) {
+    if ((data == NULL && data_size != 0) || url == NULL ||
+        strchr(url, '\n') != NULL || strchr(url, '\r') != NULL) {
         return CACHE_INVALID_ARGUMENT;
     }
     /* El temporal evita dejar un archivo final incompleto si falla fwrite. */
@@ -539,8 +597,21 @@ cache_result_t cache_storage_write(const cache_storage_t *storage,
     if (result != CACHE_OK) {
         return result;
     }
+    result = validate_storage_slot(path, url);
+    if (result != CACHE_OK) {
+        return result;
+    }
+    result = metadata_path(path, metadata_file_path, sizeof(metadata_file_path));
+    if (result != CACHE_OK) {
+        return result;
+    }
     if (snprintf(temporary_path, sizeof(temporary_path), "%s.tmp.%ld", path,
                  (long)getpid()) >= (int)sizeof(temporary_path)) {
+        return CACHE_BUFFER_TOO_SMALL;
+    }
+    if (snprintf(temporary_metadata_path, sizeof(temporary_metadata_path),
+                 "%s.tmp.%ld", metadata_file_path, (long)getpid()) >=
+        (int)sizeof(temporary_metadata_path)) {
         return CACHE_BUFFER_TOO_SMALL;
     }
     file = fopen(temporary_path, "wb");
@@ -552,8 +623,28 @@ cache_result_t cache_storage_write(const cache_storage_t *storage,
         remove(temporary_path);
         return CACHE_IO_ERROR;
     }
+    metadata_file = fopen(temporary_metadata_path, "wb");
+    if (metadata_file != NULL) {
+        int metadata_write_ok = fprintf(metadata_file, "%s\n", url) >= 0;
+        int metadata_close_ok = fclose(metadata_file) == 0;
+        if (metadata_write_ok && metadata_close_ok) {
+            metadata_ok = 1;
+        }
+    }
+    if (!metadata_ok) {
+        fclose(file);
+        remove(temporary_path);
+        remove(temporary_metadata_path);
+        return CACHE_IO_ERROR;
+    }
     if (fclose(file) != 0 || rename(temporary_path, path) != 0) {
         remove(temporary_path);
+        remove(temporary_metadata_path);
+        return CACHE_IO_ERROR;
+    }
+    if (rename(temporary_metadata_path, metadata_file_path) != 0) {
+        remove(temporary_metadata_path);
+        remove(path);
         return CACHE_IO_ERROR;
     }
     return CACHE_OK;
@@ -576,6 +667,10 @@ cache_result_t cache_storage_read(const cache_storage_t *storage,
     *data_out = NULL;
     *data_size_out = 0;
     result = cache_storage_path(storage, domain, url, path, sizeof(path));
+    if (result != CACHE_OK) {
+        return result;
+    }
+    result = metadata_matches(path, url);
     if (result != CACHE_OK) {
         return result;
     }
@@ -609,6 +704,7 @@ cache_result_t cache_storage_remove(const cache_storage_t *storage,
                                     const char *domain,
                                     const char *url) {
     char path[PATH_MAX];
+    char metadata_file_path[PATH_MAX];
     cache_result_t result;
 
     result = cache_storage_path(storage, domain, url, path, sizeof(path));
@@ -617,6 +713,10 @@ cache_result_t cache_storage_remove(const cache_storage_t *storage,
     }
     if (remove(path) != 0) {
         return errno == ENOENT ? CACHE_NOT_FOUND : CACHE_IO_ERROR;
+    }
+    if (metadata_path(path, metadata_file_path, sizeof(metadata_file_path)) ==
+        CACHE_OK) {
+        remove(metadata_file_path);
     }
     return CACHE_OK;
 }

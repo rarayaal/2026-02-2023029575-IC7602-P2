@@ -22,7 +22,8 @@ typedef enum {
     CACHE_IO_ERROR,
     CACHE_BUFFER_TOO_SMALL,
     CACHE_EXPIRED,
-    CACHE_LIMIT_EXCEEDED
+    CACHE_LIMIT_EXCEEDED,
+    CACHE_HASH_COLLISION
 } cache_result_t;
 
 typedef struct {
