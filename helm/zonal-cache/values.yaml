@@ -33,7 +33,7 @@ env:
   AUTH_MODE: "api_key"
   AUTH_UI_URL: "http://localhost:5173/cache-login"
   CONFIG_API_URL: "http://node-api-service:3000"
-  CONFIG_API_TOKEN: ""
+  CONFIG_API_TOKEN: "internal-secret-token-ic7602"
   EXPECTED_API_KEY: ""
 
 persistence:
