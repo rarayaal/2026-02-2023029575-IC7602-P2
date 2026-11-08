@@ -1,7 +1,9 @@
 #include "geo.h"
 
 #include <arpa/inet.h>
+#include <ctype.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 static ip_range_t g_ranges[GEO_MAX_RANGES];
@@ -38,10 +40,56 @@ void geo_add_range(const char *start_ip, const char *end_ip,
   entry->country_code[sizeof(entry->country_code) - 1] = '\0';
 }
 
-void geo_init(void) {
-  g_range_count = 0;
+/* Elimina espacios en blanco iniciales y finales de una cadena */
+static char *trim_whitespace(char *str) {
+  if (!str) return NULL;
+  while (isspace((unsigned char)*str)) str++;
+  if (*str == 0) return str;
+  char *end = str + strlen(str) - 1;
+  while (end > str && isspace((unsigned char)*end)) end--;
+  end[1] = '\0';
+  return str;
+}
 
-  /* Rangos sembrados de la base de datos IP-to-Country de P1 */
+int geo_load_from_csv(const char *filepath) {
+  if (!filepath) return -1;
+
+  FILE *f = fopen(filepath, "r");
+  if (!f) {
+    return -1;
+  }
+
+  char line[512];
+  int count = 0;
+
+  while (fgets(line, sizeof(line), f)) {
+    char *trimmed = trim_whitespace(line);
+    /* Ignora líneas vacías o de comentarios */
+    if (*trimmed == '\0' || *trimmed == '#') {
+      continue;
+    }
+
+    char *start_ip = strtok(trimmed, ",\t");
+    char *end_ip = strtok(NULL, ",\t");
+    char *country_code = strtok(NULL, ",\t");
+
+    if (start_ip && end_ip && country_code) {
+      start_ip = trim_whitespace(start_ip);
+      end_ip = trim_whitespace(end_ip);
+      country_code = trim_whitespace(country_code);
+
+      if (strlen(start_ip) > 0 && strlen(end_ip) > 0 && strlen(country_code) > 0) {
+        geo_add_range(start_ip, end_ip, country_code);
+        count++;
+      }
+    }
+  }
+
+  fclose(f);
+  return count;
+}
+
+static void geo_load_fallback_defaults(void) {
   /* Costa Rica (CR) */
   geo_add_range("190.113.0.0", "190.113.255.255", "CR");
   geo_add_range("196.40.0.0", "196.40.255.255", "CR");
@@ -73,6 +121,43 @@ void geo_init(void) {
 
   /* Australia (AU) */
   geo_add_range("1.1.1.0", "1.1.1.255", "AU");
+}
+
+void geo_init(void) {
+  g_range_count = 0;
+
+  const char *geo_path = getenv("GEO_DB_PATH");
+  if (!geo_path) {
+    geo_path = getenv("IP_TO_COUNTRY_PATH");
+  }
+
+  if (geo_path && strlen(geo_path) > 0) {
+    int loaded = geo_load_from_csv(geo_path);
+    if (loaded > 0) {
+      printf("[GEO] Cargados %d rangos IP-to-Country desde %s\n", loaded, geo_path);
+      return;
+    }
+    fprintf(stderr, "[GEO][WARN] No se pudo cargar el archivo '%s'. Probando rutas por defecto...\n", geo_path);
+  }
+
+  /* Intenta rutas por defecto relativas comunes */
+  const char *default_paths[] = {
+      "/app/config/ip_to_country.csv",
+      "config/ip_to_country.csv",
+      "../config/ip_to_country.csv",
+      NULL
+  };
+
+  for (int i = 0; default_paths[i]; i++) {
+    int loaded = geo_load_from_csv(default_paths[i]);
+    if (loaded > 0) {
+      printf("[GEO] Cargados %d rangos IP-to-Country desde ruta por defecto '%s'\n", loaded, default_paths[i]);
+      return;
+    }
+  }
+
+  fprintf(stderr, "[GEO][INFO] Usando rangos sembrados por defecto en memoria.\n");
+  geo_load_fallback_defaults();
 }
 
 const char *geo_lookup_country(const char *ip_str) {
