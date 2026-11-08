@@ -93,6 +93,34 @@ if command -v kubectl &> /dev/null && kubectl cluster-info &> /dev/null; then
         HELM_KEY_PATH="$(cygpath -m "${TEMP_KEY_FILE}")"
     fi
 
+    # Asegurar el namespace para los secretos
+    kubectl create namespace "${NAMESPACE}" --dry-run=client -o yaml | kubectl apply -f -
+
+    # Crear certificado TLS autofirmado para el Ingress de zonal-cache si no existe
+    if ! kubectl get secret zonal-cache-tls -n "${NAMESPACE}" &> /dev/null; then
+        echo "🔐 Generando certificado autofirmado para zonal-cache-tls..."
+
+        TLS_DIR="$(mktemp -d "${TMPDIR:-/tmp}/tls-cert.XXXXXX")"
+
+        # MSYS2_ARG_CONV_EXCL previene que Git Bash convierta /CN= en ruta de Windows
+        MSYS2_ARG_CONV_EXCL="/CN=" openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
+            -keyout "${TLS_DIR}/tls.key" \
+            -out "${TLS_DIR}/tls.crt" \
+            -subj "/CN=cache.local" \
+            -addext "subjectAltName=DNS:cache.local" 2>/dev/null
+
+        kubectl create secret tls zonal-cache-tls \
+            --cert="${TLS_DIR}/tls.crt" \
+            --key="${TLS_DIR}/tls.key" \
+            -n "${NAMESPACE}"
+
+        rm -rf "${TLS_DIR}"
+
+        echo "✔ Secreto zonal-cache-tls creado exitosamente en namespace ${NAMESPACE}."
+    else
+        echo "✔ Secreto zonal-cache-tls ya existe en namespace ${NAMESPACE}."
+    fi
+
     echo "📦 Paso 1/2: Desplegando stack base (zonal-cache, node-api, ui, mock-origin, dns-interceptor)..."
     helm upgrade --install "${RELEASE_NAME}" "${STACK_DIR}" \
         --namespace "${NAMESPACE}" \
