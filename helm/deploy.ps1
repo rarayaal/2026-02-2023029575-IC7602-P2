@@ -134,6 +134,44 @@ if ($clusterAvailable) {
         [System.IO.File]::WriteAllText($tempKeyFile, $keyContent, $utf8NoBom)
         $tempHelmPath = $tempKeyFile.Replace('\', '/')
 
+        # Asegurar el namespace para los secretos
+        & kubectl create namespace $Namespace --dry-run=client -o yaml | & kubectl apply -f -
+
+        # Crear certificado TLS autofirmado para el Ingress de zonal-cache si no existe
+        $secretExists = & kubectl get secret zonal-cache-tls -n $Namespace --ignore-not-found 2>$null
+
+        if ([string]::IsNullOrWhiteSpace($secretExists)) {
+            Write-Host "[INFO] Generando certificado autofirmado para zonal-cache-tls..." -ForegroundColor Yellow
+
+            $tempCertDir = Join-Path ([System.IO.Path]::GetTempPath()) ([System.Guid]::NewGuid().ToString())
+            $null = New-Item -ItemType Directory -Path $tempCertDir -Force
+
+            $keyPath = Join-Path $tempCertDir "tls.key"
+            $crtPath = Join-Path $tempCertDir "tls.crt"
+
+            try {
+                $env:MSYS2_ARG_CONV_EXCL = "/CN="
+
+                & openssl req -x509 -nodes -days 365 -newkey rsa:2048 `
+                    -keyout $keyPath `
+                    -out $crtPath `
+                    -subj "/CN=cache.local" 2>$null
+
+                & kubectl create secret tls zonal-cache-tls `
+                    --cert=$crtPath `
+                    --key=$keyPath `
+                    -n $Namespace
+
+                Write-Host "[OK] Secreto zonal-cache-tls creado exitosamente en namespace '$Namespace'." -ForegroundColor Green
+            }
+            finally {
+                Remove-Item -Recurse -Force $tempCertDir -ErrorAction SilentlyContinue
+            }
+        }
+        else {
+            Write-Host "[OK] Secreto zonal-cache-tls ya existe en namespace '$Namespace'." -ForegroundColor Green
+        }
+
         Write-Host "[INFO] Paso 1/2: Desplegando stack base (zonal-cache, node-api, ui, mock-origin, dns-interceptor)..." -ForegroundColor Yellow
         & helm upgrade --install $ReleaseName $stackDir --namespace $Namespace --create-namespace --wait --atomic --timeout 5m `
             --set global.internalServiceToken=$env:INTERNAL_SERVICE_TOKEN `
