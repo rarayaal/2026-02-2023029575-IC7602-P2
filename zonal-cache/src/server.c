@@ -241,46 +241,42 @@ int extract_query_param(const char *query, const char *param_name, char *out, si
 int is_valid_session(const char *domain, const char *url_id, const char *session_token) {
     if (!session_token || strlen(session_token) == 0) return 0;
 
+    // 1. Para pruebas locales o integración aislada, validar contra EXPECTED_SESSION_TOKEN si existe
     const char *expected_token = getenv("EXPECTED_SESSION_TOKEN");
     if (expected_token && strlen(expected_token) > 0) {
         return (strcmp(session_token, expected_token) == 0);
     }
 
+    // 2. Si está configurado el API remoto, validar contra los endpoints internos de Node.js/Firestore
     const char *api_url = getenv("CONFIG_API_URL");
     if (api_url && strlen(api_url) > 0) {
         int remote_res = validate_session_remote(domain, url_id, session_token);
-        if (remote_res > 0) return 1;
-        // Fallback para pruebas locales en localhost si no está registrado en Firestore
-        if (strcmp(domain, "localhost") == 0 || strcmp(domain, "default") == 0) {
-            return 1;
-        }
-        return 0;
+        return (remote_res > 0) ? 1 : 0;
     }
 
-    return 1;
+    // 3. Si no hay API remota ni token local esperado configurado, rechazar por seguridad
+    return 0;
 }
 
 // Valida si la API Key es válida (T-13)
 int is_valid_api_key(const char *domain, const char *url_id, const char *api_key) {
     if (!api_key || strlen(api_key) == 0) return 0;
 
+    // 1. Para pruebas locales o integración aislada, validar contra EXPECTED_API_KEY si existe
     const char *expected_key = getenv("EXPECTED_API_KEY");
     if (expected_key && strlen(expected_key) > 0) {
         return (strcmp(api_key, expected_key) == 0);
     }
 
+    // 2. Si está configurado el API remoto, validar contra los endpoints internos de Node.js/Firestore
     const char *api_url = getenv("CONFIG_API_URL");
     if (api_url && strlen(api_url) > 0) {
         int remote_res = validate_api_key_remote(domain, url_id, api_key);
-        if (remote_res > 0) return 1;
-        // Fallback para pruebas locales en localhost si no está registrado en Firestore
-        if (strcmp(domain, "localhost") == 0 || strcmp(domain, "default") == 0) {
-            return 1;
-        }
-        return 0;
+        return (remote_res > 0) ? 1 : 0;
     }
 
-    return 1;
+    // 3. Si no hay API remota ni clave local esperada configurada, rechazar por seguridad
+    return 0;
 }
 
 
@@ -517,6 +513,7 @@ void *handle_client(void *client_socket_ptr) {
 }
 
 
+#ifndef TESTING_NO_MAIN
 int main(void) {
     signal(SIGINT, handle_signal);
     signal(SIGTERM, handle_signal);
@@ -614,3 +611,4 @@ int main(void) {
     printf("\n[Zonal Cache] Servidor detenido ordenadamente.\n");
     return 0;
 }
+#endif
