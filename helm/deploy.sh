@@ -106,7 +106,8 @@ if command -v kubectl &> /dev/null && kubectl cluster-info &> /dev/null; then
         MSYS2_ARG_CONV_EXCL="/CN=" openssl req -x509 -nodes -days 365 -newkey rsa:2048 \
             -keyout "${TLS_DIR}/tls.key" \
             -out "${TLS_DIR}/tls.crt" \
-            -subj "/CN=cache.local" 2>/dev/null
+            -subj "/CN=cache.local" \
+            -addext "subjectAltName=DNS:cache.local" 2>/dev/null
 
         kubectl create secret tls zonal-cache-tls \
             --cert="${TLS_DIR}/tls.crt" \

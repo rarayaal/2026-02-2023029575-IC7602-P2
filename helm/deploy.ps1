@@ -152,10 +152,16 @@ if ($clusterAvailable) {
             try {
                 $env:MSYS2_ARG_CONV_EXCL = "/CN="
 
+                $prevEAP = $ErrorActionPreference
+                $ErrorActionPreference = 'SilentlyContinue'
+
                 & openssl req -x509 -nodes -days 365 -newkey rsa:2048 `
                     -keyout $keyPath `
                     -out $crtPath `
-                    -subj "/CN=cache.local" 2>$null
+                    -subj "/CN=cache.local" `
+                    -addext "subjectAltName=DNS:cache.local" 2>$null
+
+                $ErrorActionPreference = $prevEAP
 
                 & kubectl create secret tls zonal-cache-tls `
                     --cert=$crtPath `
