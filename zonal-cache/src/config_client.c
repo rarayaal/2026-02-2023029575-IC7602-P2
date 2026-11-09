@@ -290,7 +290,7 @@ int validate_api_key_remote(const char *domain, const char *url_id, const char *
     if (!domain || !url_id || !api_key) return 0;
     const char *api_url = getenv("CONFIG_API_URL");
     const char *api_token = getenv("CONFIG_API_TOKEN");
-    if (!api_url || !api_token) return 1; // Fallback permitivo si no está configurado
+    if (!api_url || !api_token) return 0; // Rechazar si no está configurada la API remota
 
     CURL *curl = curl_easy_init();
     if (!curl) return 0;
@@ -340,7 +340,7 @@ int validate_session_remote(const char *domain, const char *url_id, const char *
     if (!domain || !url_id || !session_token) return 0;
     const char *api_url = getenv("CONFIG_API_URL");
     const char *api_token = getenv("CONFIG_API_TOKEN");
-    if (!api_url || !api_token) return 1;
+    if (!api_url || !api_token) return 0; // Rechazar si no está configurada la API remota
 
     CURL *curl = curl_easy_init();
     if (!curl) return 0;

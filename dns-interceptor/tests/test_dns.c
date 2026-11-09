@@ -1,8 +1,34 @@
 #include "dns.h"
+#include "geo.h"
 
 #include <assert.h>
 #include <stdio.h>
 #include <string.h>
+
+/* Valida la carga de rangos GeoIP desde archivo CSV */
+static void test_geo_load_csv_and_lookup(void) {
+  int loaded = geo_load_from_csv("config/ip_to_country.csv");
+  if (loaded < 0) {
+    loaded = geo_load_from_csv("../config/ip_to_country.csv");
+  }
+  assert(loaded > 0);
+
+  /* Prueba IP de Costa Rica */
+  const char *cr = geo_lookup_country("190.113.10.5");
+  assert(cr != NULL);
+  assert(strcmp(cr, "CR") == 0);
+
+  /* Prueba IP de Estados Unidos */
+  const char *us = geo_lookup_country("8.8.8.8");
+  assert(us != NULL);
+  assert(strcmp(us, "US") == 0);
+
+  /* Prueba IP desconocida */
+  const char *unknown = geo_lookup_country("240.0.0.1");
+  assert(unknown == NULL);
+
+  printf("[TEST PASSED] test_geo_load_csv_and_lookup\n");
+}
 
 /* Valida la construcción exacta de un paquete binario de respuesta DNS tipo A
  */
@@ -64,7 +90,8 @@ static void test_rechaza_paquetes_invalidos(void) {
 }
 
 int main(void) {
-  printf("Ejecutando pruebas unitarias de serializacion DNS (RFC 2929)...\n");
+  printf("Ejecutando pruebas unitarias de serializacion DNS (RFC 2929) y GeoIP...\n");
+  test_geo_load_csv_and_lookup();
   test_construye_respuesta_binaria_valida();
   test_rechaza_paquetes_invalidos();
   printf("Todas las pruebas pasaron satisfactoriamente.\n");

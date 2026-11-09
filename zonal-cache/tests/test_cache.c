@@ -140,18 +140,41 @@ int main(void) {
 
     assert(index != NULL);
     assert(storage != NULL);
-        assert(cache_storage_path(storage, "../escape", "/bad", (char[16]){0}, 16) ==
-            CACHE_INVALID_ARGUMENT);
-        assert(cache_storage_path(storage, "example.com", "/bad", (char[2]){0}, 2) ==
-            CACHE_BUFFER_TOO_SMALL);
-        assert(cache_storage_write(storage, "example.com", "/empty", NULL, 0) == CACHE_OK);
-        assert(cache_storage_read(storage, "example.com", "/empty", &loaded,
-                      &loaded_size) == CACHE_OK);
-        assert(loaded != NULL);
-        assert(loaded_size == 0);
-        free(loaded);
-        assert(cache_storage_read(storage, "example.com", "/missing", &loaded,
-                      &loaded_size) == CACHE_NOT_FOUND);
+    assert(cache_storage_path(storage, "../escape", "/bad", (char[16]){0}, 16) ==
+           CACHE_INVALID_ARGUMENT);
+    assert(cache_storage_path(storage, "example.com", "/bad", (char[2]){0}, 2) ==
+           CACHE_BUFFER_TOO_SMALL);
+    assert(cache_storage_write(storage, "example.com", "/empty", NULL, 0) == CACHE_OK);
+    assert(cache_storage_read(storage, "example.com", "/empty", &loaded,
+                              &loaded_size) == CACHE_OK);
+    assert(loaded != NULL);
+    assert(loaded_size == 0);
+    free(loaded);
+    assert(cache_storage_read(storage, "example.com", "/missing", &loaded,
+                              &loaded_size) == CACHE_NOT_FOUND);
+
+    {
+        char collision_path[4096];
+        char collision_metadata_path[4096];
+        FILE *collision_file;
+
+        assert(cache_storage_path(storage, "example.com", "/collision",
+                                  collision_path, sizeof(collision_path)) == CACHE_OK);
+        snprintf(collision_metadata_path, sizeof(collision_metadata_path),
+                 "%s.url", collision_path);
+        collision_file = fopen(collision_path, "wb");
+        assert(collision_file != NULL);
+        assert(fputs("contenido original", collision_file) >= 0);
+        assert(fclose(collision_file) == 0);
+        collision_file = fopen(collision_metadata_path, "wb");
+        assert(collision_file != NULL);
+        assert(fputs("/otra-url\n", collision_file) >= 0);
+        assert(fclose(collision_file) == 0);
+        assert(cache_storage_write(storage, "example.com", "/collision",
+                                   "nuevo", 5) == CACHE_HASH_COLLISION);
+        remove(collision_path);
+        remove(collision_metadata_path);
+    }
     entry = sample_entry();
     entry.expires_at = 0;
     assert(cache_store_put(index, storage, &entry, content,

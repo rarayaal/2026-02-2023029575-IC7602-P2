@@ -5,7 +5,7 @@
 #include <stdint.h>
 
 #define GEO_COUNTRY_CODE_LEN 4
-#define GEO_MAX_RANGES 128
+#define GEO_MAX_RANGES 1024
 
 /* Estructura para almacenar un rango de direcciones IP y su país asociado */
 typedef struct {
@@ -14,9 +14,16 @@ typedef struct {
   char country_code[GEO_COUNTRY_CODE_LEN];
 } ip_range_t;
 
-/* Inicializa la tabla de geolocalización con los rangos base de IP to Country
+/* Inicializa la tabla de geolocalización.
+ * Intenta cargar desde GEO_DB_PATH o IP_TO_COUNTRY_PATH, o desde config/ip_to_country.csv.
+ * Si falla, usa rangos sembrados por defecto.
  */
 void geo_init(void);
+
+/* Carga rangos de geolocalización desde un archivo CSV.
+ * Retorna el número de rangos cargados exitosamente, o -1 en caso de error al abrir el archivo.
+ */
+int geo_load_from_csv(const char *filepath);
 
 /* Carga un rango de IP numérico asociado a un código de país */
 void geo_add_range(const char *start_ip, const char *end_ip,

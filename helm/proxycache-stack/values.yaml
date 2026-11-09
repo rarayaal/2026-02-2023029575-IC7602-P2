@@ -27,6 +27,7 @@ dns-interceptor:
     zonalCacheUs: "10.0.2.10"
     zonalCacheDefault: "10.0.0.10"
     configDomains: "app.local,example.com"
+    geoDbPath: "/app/config/ip_to_country.csv"
 
 zonal-cache:
   replicaCount: 1

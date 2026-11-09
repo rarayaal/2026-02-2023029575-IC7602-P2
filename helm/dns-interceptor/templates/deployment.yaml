@@ -39,5 +39,7 @@ spec:
               value: {{ .Values.env.zonalCacheDefault | quote }}
             - name: CONFIG_DOMAINS
               value: {{ .Values.env.configDomains | quote }}
+            - name: GEO_DB_PATH
+              value: {{ .Values.env.geoDbPath | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
