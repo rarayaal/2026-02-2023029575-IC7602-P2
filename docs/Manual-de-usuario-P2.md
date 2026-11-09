@@ -737,11 +737,20 @@ Durante el desarrollo de las tareas asignadas se utilizó IA como apoyo para gen
 ---
 
 ## 8. Conclusiones
+
+El DNS Interceptor enruta de forma eficiente el tráfico hacia las cachés zonales mediante sockets UDP en un tiempo menor a milisegundos. También carga de forma dinámica la base IP-to-Country desde un CSV configurable, optimiza la búsqueda convirtiendo IPv4 a enteros de 32 bits y preserva la navegación general reenvíando los dominios no administrados a servidores DNS públicos.
+
 El zonal cache cuenta con un motor modular que separa la administración de metadatos en memoria, la persistencia de archivos en disco, la expiración por TTL, la selección de víctimas, el procesamiento de solicitudes HTTP y la integración con el servidor de origen.
 
 El índice en memoria utiliza una tabla hash y conserva la información necesaria para implementar diferentes políticas de reemplazo. Por su parte, el almacenamiento en disco organiza los recursos por dominio y aplica validaciones para evitar accesos fuera del directorio de caché.
 
+El uso de pthreads y un mutex global permite que todas las conexiones concurrentes compartan un único índice de caché y contadores de desalojo en la RAM de forma segura, evitando que haya sobrecarga y la complejidad de usar procesos independientes mediante fork y memoria compartida IPC. 
+
+Dar la terminación SSL al ingress de kubernetes y consultar firestore a traves de la API interna en Node.js evita usar bibliotecas criptograficas pesadas y SDKs complejos en GNU C, manteniendo el Zonal Cache ligero, modular y enfocado en la transferencia de datos y seguridad.
+
 Definir el modelo de datos y el contrato de endpoints entre el REST API, el Zonal Cache y la interfaz antes de programar permitió que los tres componentes avanzaran en paralelo, aunque cada uno se desarrolló en un lenguaje distinto, y redujo los cambios durante la integración.
+
+Los servidores de origen dedicados, es decir, Apache para contenido estático y el REST API en Java para operaciones CRUD, permitieron validar de forma integral el almacenamiento en disco, la expiración por TTL, las políticas de reemplazo y el comportamiento ante peticiones dinámicas en la caché zonal.  
 
 Delegar las cuentas de la plataforma en Firebase Authentication y separar la autenticación de personas de la de servicios internos simplificó la seguridad del API: el API solo verifica un token firmado por Google, y los componentes en GNU C únicamente deben enviar un encabezado con el token de servicio.
 
@@ -756,6 +765,14 @@ La infraestructura utiliza Docker, Docker Compose, Kubernetes y Helm para integr
 Evitar imprimir API keys, tokens de sesión y credenciales en los registros del servidor, estos valores deben ocultarse o enmascararse.
 
 Agregar pruebas de integración y extremo a extremo para validar el flujo completo contra el REST API, el origen y los mecanismos de autenticación.
+
+Implementar una caché con TTL para respuestas recursivas del upstream, optimizar la búsqueda geográfica mediante un árbol binario de prefijos para soportar bases de datos masivas y agregar límites de tasa en el socket UDP para mitigar ataques de amplificación.
+
+El modelo actual de un hilo por cliente es adecuado para las pruebas, pero para producción con miles de conexiones simultáneas se recomienda implementar multiplexión con epoll y un puntero thread pool, lo que podria reducir el consumo de memoria y el costo de cambio de contexto en el sistema operativo. 
+
+Conviene almacenar en una caché local temporal con TTL corto las configuraciones y credenciales del dominio en lugar de consultar la API de Node.js en cada solicitud, disminuyendo la latencia de respuesta y el tráfico interno del clúster. 
+
+Integrar métricas de observabilidad y telemetría mediante endpoints estándar de Prometheus tanto en el microservicio REST en Java como en el servidor Apache, permitiendo monitorear en tiempo real la tasa de solicitudes concurrentes el tiempo de procesamiento en el origen y la tasa de aciertos y fallos del zonal caché. 
 
 Agregar un límite de intentos por dirección IP en el inicio de sesión de las URLs protegidas, para mitigar ataques de fuerza bruta contra las contraseñas.
 
