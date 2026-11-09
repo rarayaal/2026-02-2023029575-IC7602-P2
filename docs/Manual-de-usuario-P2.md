@@ -737,17 +737,9 @@ Durante el desarrollo de las tareas asignadas se utilizó IA como apoyo para gen
 ---
 
 ## 8. Conclusiones
-Implementar el DNS Interceptor como un servidor UDP en GNU C permitió procesar directamente las tramas DNS: el componente intercepta únicamente los dominios administrados y reenvía las demás consultas al DNS upstream, de modo que la navegación del resto de sitios no se ve afectada.
-
-Cargar la base IP-to-Country desde un archivo CSV configurable por variable de entorno elimina los rangos escritos en el código y permite actualizar la geolocalización sin recompilar el componente.
-
 El zonal cache cuenta con un motor modular que separa la administración de metadatos en memoria, la persistencia de archivos en disco, la expiración por TTL, la selección de víctimas, el procesamiento de solicitudes HTTP y la integración con el servidor de origen.
 
 El índice en memoria utiliza una tabla hash y conserva la información necesaria para implementar diferentes políticas de reemplazo. Por su parte, el almacenamiento en disco organiza los recursos por dominio y aplica validaciones para evitar accesos fuera del directorio de caché.
-
-El modelo de un hilo por conexión, con exclusión mutua sobre el índice y el almacenamiento, permite atender varios clientes de forma simultánea sin corromper la caché, a costa de serializar el acceso al motor de almacenamiento.
-
-Combinar sockets TCP directos para los orígenes HTTP con libcurl para los orígenes HTTPS permitió soportar contenido cifrado sin implementar TLS manualmente, y delegar la SSL termination al Ingress de Kubernetes mantiene el servidor en GNU C enfocado en la lógica de caché.
 
 Definir el modelo de datos y el contrato de endpoints entre el REST API, el Zonal Cache y la interfaz antes de programar permitió que los tres componentes avanzaran en paralelo, aunque cada uno se desarrolló en un lenguaje distinto, y redujo los cambios durante la integración.
 
@@ -761,17 +753,9 @@ La infraestructura utiliza Docker, Docker Compose, Kubernetes y Helm para integr
 
 ## 9. Recomendaciones
 
-Actualizar la lista de dominios del DNS Interceptor mediante una notificación del REST API al verificar o eliminar un dominio, en lugar de consultarla periódicamente, para que los cambios se apliquen de inmediato.
-
-Ordenar los rangos de la base IP-to-Country y buscarlos mediante búsqueda binaria, además de ampliar el límite de `GEO_MAX_RANGES` (1024), para poder cargar una base completa sin degradar el tiempo de respuesta.
-
 Evitar imprimir API keys, tokens de sesión y credenciales en los registros del servidor, estos valores deben ocultarse o enmascararse.
 
 Agregar pruebas de integración y extremo a extremo para validar el flujo completo contra el REST API, el origen y los mecanismos de autenticación.
-
-Reemplazar el mutex global por bloqueos de lectura y escritura (`pthread_rwlock_t`) o por dominio, para que las lecturas concurrentes de la caché no se bloqueen entre sí.
-
-Guardar en memoria por unos segundos la configuración obtenida de cada dominio, para no consultar el REST API en cada petición y reducir la latencia de la caché.
 
 Agregar un límite de intentos por dirección IP en el inicio de sesión de las URLs protegidas, para mitigar ataques de fuerza bruta contra las contraseñas.
 
