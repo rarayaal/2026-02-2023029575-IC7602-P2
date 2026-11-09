@@ -1,7 +1,12 @@
 # Etapa de compilación
-FROM gcc:12-bullseye AS builder
+FROM gcc:12-bookworm AS builder
 
 WORKDIR /app
+
+# libcurl para consultar los dominios verificados al REST API en Node.js
+RUN apt-get update && apt-get install -y --no-install-recommends libcurl4-openssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
 COPY Makefile ./
 COPY config/ ./config/
 COPY include/ ./include/
@@ -12,7 +17,10 @@ COPY tests/ ./tests/
 RUN make test && make
 
 # Etapa final de ejecución
-FROM debian:bullseye-slim
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y --no-install-recommends libcurl4 ca-certificates \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 COPY --from=builder /app/dns-interceptor /app/dns-interceptor

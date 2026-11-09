@@ -28,6 +28,8 @@ dns-interceptor:
     zonalCacheDefault: "10.0.0.10"
     configDomains: "app.local,example.com"
     geoDbPath: "/app/config/ip_to_country.csv"
+    # Dominios verificados desde el API; el token lo inyecta deploy.sh
+    configApiUrl: "http://proxycache-node-api:3000"
 
 zonal-cache:
   replicaCount: 1

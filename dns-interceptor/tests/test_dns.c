@@ -1,3 +1,4 @@
+#include "config_api.h"
 #include "dns.h"
 #include "geo.h"
 
@@ -89,11 +90,39 @@ static void test_rechaza_paquetes_invalidos(void) {
   printf("[TEST PASSED] test_rechaza_paquetes_invalidos\n");
 }
 
+/* Valida la lectura de los dominios verificados que entrega el REST API */
+static void test_parsea_dominios_del_api(void) {
+  domain_list_t list;
+  int result = config_api_parse_domains(
+      "{\"domains\":[\"app.local\",\"java.app.local\"]}", &list);
+
+  assert(result == 0);
+  assert(list.count == 2);
+  assert(strcmp(list.names[0], "app.local") == 0);
+  assert(strcmp(list.names[1], "java.app.local") == 0);
+
+  printf("[TEST PASSED] test_parsea_dominios_del_api\n");
+}
+
+/* Valida una lista vacía y el rechazo de respuestas que no son la esperada */
+static void test_parsea_lista_vacia_y_rechaza_json_invalido(void) {
+  domain_list_t list;
+
+  assert(config_api_parse_domains("{\"domains\":[]}", &list) == 0);
+  assert(list.count == 0);
+  assert(config_api_parse_domains("{\"error\":{\"code\":\"X\"}}", &list) == -1);
+  assert(config_api_parse_domains("{\"domains\":[\"sin-cerrar", &list) == -1);
+
+  printf("[TEST PASSED] test_parsea_lista_vacia_y_rechaza_json_invalido\n");
+}
+
 int main(void) {
   printf("Ejecutando pruebas unitarias de serializacion DNS (RFC 2929) y GeoIP...\n");
   test_geo_load_csv_and_lookup();
   test_construye_respuesta_binaria_valida();
   test_rechaza_paquetes_invalidos();
+  test_parsea_dominios_del_api();
+  test_parsea_lista_vacia_y_rechaza_json_invalido();
   printf("Todas las pruebas pasaron satisfactoriamente.\n");
   return 0;
 }

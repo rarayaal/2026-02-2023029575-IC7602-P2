@@ -41,5 +41,11 @@ spec:
               value: {{ .Values.env.configDomains | quote }}
             - name: GEO_DB_PATH
               value: {{ .Values.env.geoDbPath | quote }}
+            - name: CONFIG_API_URL
+              value: {{ .Values.env.configApiUrl | quote }}
+            - name: CONFIG_API_TOKEN
+              value: {{ .Values.env.configApiToken | quote }}
+            - name: CONFIG_REFRESH_SECONDS
+              value: {{ .Values.env.configRefreshSeconds | quote }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}

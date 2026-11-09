@@ -1,5 +1,6 @@
 CC ?= gcc
 CFLAGS ?= -Wall -Wextra -pedantic -std=c11 -O2 -Iinclude
+LDLIBS ?= -lcurl
 TARGET = dns-interceptor
 TEST_TARGET = test_dns
 SRC_DIR = src
@@ -12,7 +13,7 @@ OBJS = $(patsubst $(SRC_DIR)/%.c, $(OBJ_DIR)/%.o, $(SRCS))
 all: $(TARGET)
 
 $(TARGET): $(OBJS) $(OBJ_DIR)/main.o
-	$(CC) $(CFLAGS) -o $@ $^
+	$(CC) $(CFLAGS) -o $@ $^ $(LDLIBS)
 
 $(OBJ_DIR)/main.o: $(SRC_DIR)/main.c | $(OBJ_DIR)
 	$(CC) $(CFLAGS) -c $< -o $@
@@ -24,7 +25,7 @@ $(OBJ_DIR):
 	mkdir -p $(OBJ_DIR)
 
 test: $(OBJS)
-	$(CC) $(CFLAGS) $(TEST_DIR)/test_dns.c $(OBJS) -o $(TEST_TARGET)
+	$(CC) $(CFLAGS) $(TEST_DIR)/test_dns.c $(OBJS) -o $(TEST_TARGET) $(LDLIBS)
 	./$(TEST_TARGET)
 	rm -f $(TEST_TARGET)
 

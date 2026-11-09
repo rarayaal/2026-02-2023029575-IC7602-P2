@@ -130,6 +130,7 @@ if command -v kubectl &> /dev/null && kubectl cluster-info &> /dev/null; then
         --timeout 5m \
         --set global.internalServiceToken="${INTERNAL_SERVICE_TOKEN}" \
         --set zonal-cache.env.CONFIG_API_TOKEN="${INTERNAL_SERVICE_TOKEN}" \
+        --set dns-interceptor.env.configApiToken="${INTERNAL_SERVICE_TOKEN}" \
         --set node-api.env.INTERNAL_SERVICE_TOKEN="${INTERNAL_SERVICE_TOKEN}" \
         --set node-api.env.FIREBASE_PROJECT_ID="${FIREBASE_PROJECT_ID}" \
         --set node-api.env.FIREBASE_CLIENT_EMAIL="${FIREBASE_CLIENT_EMAIL}" \
@@ -146,6 +147,7 @@ if command -v kubectl &> /dev/null && kubectl cluster-info &> /dev/null; then
             --timeout 5m \
             --set global.internalServiceToken="${INTERNAL_SERVICE_TOKEN}" \
             --set zonal-cache.env.CONFIG_API_TOKEN="${INTERNAL_SERVICE_TOKEN}" \
+            --set dns-interceptor.env.configApiToken="${INTERNAL_SERVICE_TOKEN}" \
             --set node-api.env.INTERNAL_SERVICE_TOKEN="${INTERNAL_SERVICE_TOKEN}" \
             --set node-api.env.FIREBASE_PROJECT_ID="${FIREBASE_PROJECT_ID}" \
             --set node-api.env.FIREBASE_CLIENT_EMAIL="${FIREBASE_CLIENT_EMAIL}" \
