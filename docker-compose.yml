@@ -129,6 +129,10 @@ services:
       - ZONAL_CACHE_DEFAULT=${ZONAL_CACHE_DEFAULT:-172.28.0.10}
       - CONFIG_DOMAINS=${CONFIG_DOMAINS:-app.local,example.com}
       - GEO_DB_PATH=/app/config/ip_to_country.csv
+      # Dominios verificados desde el API; si no responde se usa CONFIG_DOMAINS
+      - CONFIG_API_URL=${CONFIG_API_URL:-http://api:3000}
+      - CONFIG_API_TOKEN=${CONFIG_API_TOKEN}
+      - CONFIG_REFRESH_SECONDS=${CONFIG_REFRESH_SECONDS:-30}
     restart: unless-stopped
     depends_on:
       - zonal-cache

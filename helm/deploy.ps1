@@ -182,6 +182,7 @@ if ($clusterAvailable) {
         & helm upgrade --install $ReleaseName $stackDir --namespace $Namespace --create-namespace --wait --atomic --timeout 5m `
             --set global.internalServiceToken=$env:INTERNAL_SERVICE_TOKEN `
             --set zonal-cache.env.CONFIG_API_TOKEN=$env:INTERNAL_SERVICE_TOKEN `
+            --set dns-interceptor.env.configApiToken=$env:INTERNAL_SERVICE_TOKEN `
             --set node-api.env.INTERNAL_SERVICE_TOKEN=$env:INTERNAL_SERVICE_TOKEN `
             --set node-api.env.FIREBASE_PROJECT_ID=$env:FIREBASE_PROJECT_ID `
             --set node-api.env.FIREBASE_CLIENT_EMAIL=$env:FIREBASE_CLIENT_EMAIL `
@@ -199,6 +200,7 @@ if ($clusterAvailable) {
             & helm upgrade --install $ReleaseName $stackDir --namespace $Namespace --wait --atomic --timeout 5m `
                 --set global.internalServiceToken=$env:INTERNAL_SERVICE_TOKEN `
                 --set zonal-cache.env.CONFIG_API_TOKEN=$env:INTERNAL_SERVICE_TOKEN `
+                --set dns-interceptor.env.configApiToken=$env:INTERNAL_SERVICE_TOKEN `
                 --set node-api.env.INTERNAL_SERVICE_TOKEN=$env:INTERNAL_SERVICE_TOKEN `
                 --set node-api.env.FIREBASE_PROJECT_ID=$env:FIREBASE_PROJECT_ID `
                 --set node-api.env.FIREBASE_CLIENT_EMAIL=$env:FIREBASE_CLIENT_EMAIL `

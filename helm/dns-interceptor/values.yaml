@@ -19,6 +19,11 @@ env:
   zonalCacheDefault: "10.0.0.10"
   configDomains: "app.local,api.redes.tec"
   geoDbPath: "/app/config/ip_to_country.csv"
+  # Dominios verificados desde el REST API en Node.js; si están vacíos se usa configDomains.
+  # El token se inyecta con --set (ver helm/deploy.sh).
+  configApiUrl: ""
+  configApiToken: ""
+  configRefreshSeconds: "30"
 
 resources:
   limits:
