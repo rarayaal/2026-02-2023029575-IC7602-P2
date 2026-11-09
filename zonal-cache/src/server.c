@@ -142,22 +142,34 @@ int fetch_from_origin(const char *scheme, const char *host, int origin_port, con
         curl_easy_setopt(curl, CURLOPT_USERAGENT, "ZonalCache/1.0");
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
+        // El cliente recibe la respuesta por HTTP/1.1: si libcurl negocia HTTP/2, la línea
+        // de estado "HTTP/2" reenviada tal cual es rechazada por el cliente.
+        curl_easy_setopt(curl, CURLOPT_HTTP_VERSION, (long)CURL_HTTP_VERSION_1_1);
 
         CURLcode res = curl_easy_perform(curl);
         int total = -1;
         if (res == CURLE_OK) {
-            size_t combined = header_buf.size + body_buf.size;
-            if (combined >= max_len) {
-                combined = max_len - 1;
+            // libcurl ya decodificó el cuerpo (chunked, redirecciones), así que no se
+            // reenvían los encabezados del origen: se arma una respuesta HTTP/1.1 propia
+            // con el código, el tipo de contenido y el largo real del cuerpo.
+            long status = 200;
+            char *content_type = NULL;
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &status);
+            curl_easy_getinfo(curl, CURLINFO_CONTENT_TYPE, &content_type);
+
+            int head_len = snprintf(response_buffer, max_len,
+                                    "HTTP/1.1 %ld OK\r\n"
+                                    "Content-Type: %s\r\n"
+                                    "Content-Length: %zu\r\n"
+                                    "Connection: close\r\n\r\n",
+                                    status,
+                                    content_type ? content_type : "application/octet-stream",
+                                    body_buf.size);
+            if (head_len > 0 && (size_t)head_len + body_buf.size < max_len) {
+                memcpy(response_buffer + head_len, body_buf.data, body_buf.size);
+                total = head_len + (int)body_buf.size;
+                response_buffer[total] = '\0';
             }
-            if (header_buf.size < combined) {
-                memcpy(response_buffer, header_buf.data, header_buf.size);
-                memcpy(response_buffer + header_buf.size, body_buf.data, combined - header_buf.size);
-            } else {
-                memcpy(response_buffer, header_buf.data, combined);
-            }
-            response_buffer[combined] = '\0';
-            total = (int)combined;
         }
 
         free(header_buf.data);
